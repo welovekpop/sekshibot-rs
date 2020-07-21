@@ -1,8 +1,9 @@
+use anyhow::{bail, Error, Result};
 use async_std::sync::Sender;
 use serde::Deserialize;
 use std::fmt::Display;
 
-fn parse_message(input: &str) -> anyhow::Result<(&str, Vec<&str>)> {
+fn parse_message(input: &str) -> Result<(&str, Vec<&str>)> {
     use nom::branch::alt;
     use nom::bytes::complete::{escaped, is_not, take_while};
     use nom::character::complete::{alpha1, char, space0, space1};
@@ -29,12 +30,43 @@ fn parse_message(input: &str) -> anyhow::Result<(&str, Vec<&str>)> {
 
     let (_, result) = match full_parser(input) {
         Ok(result) => result,
-        Err(nom::Err::Incomplete(_)) => anyhow::bail!("garbage data at end of message?"),
-        Err(nom::Err::Error((_, kind))) => anyhow::bail!("parse error: {:?}", kind),
-        Err(nom::Err::Failure((_, kind))) => anyhow::bail!("parse failure: {:?}", kind),
+        Err(nom::Err::Incomplete(_)) => bail!("garbage data at end of message?"),
+        Err(nom::Err::Error((_, kind))) => bail!("parse error: {:?}", kind),
+        Err(nom::Err::Failure((_, kind))) => bail!("parse failure: {:?}", kind),
     };
 
     Ok(result)
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct BaseMedia {
+    #[serde(rename = "sourceType")]
+    pub source_type: String,
+    #[serde(rename = "sourceID")]
+    pub source_id: String,
+    pub artist: String,
+    pub title: String,
+    pub duration: u32,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct MediaWithOverrides {
+    pub media: BaseMedia,
+    pub artist: String,
+    pub title: String,
+    pub start: u32,
+    pub end: u32,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct AdvanceMessage {
+    #[serde(rename = "historyID")]
+    pub history_id: String,
+    #[serde(rename = "userID")]
+    pub user_id: String,
+    pub media: MediaWithOverrides,
+    #[serde(rename = "playedAt")]
+    pub played_at: u64,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -64,9 +96,9 @@ pub struct ChatCommand {
 }
 
 impl std::str::FromStr for ChatCommand {
-    type Err = anyhow::Error;
+    type Err = Error;
 
-    fn from_str(s: &str) -> anyhow::Result<Self> {
+    fn from_str(s: &str) -> Result<Self> {
         let (command, arguments) = parse_message(s)?;
         Ok(Self {
             command: command.to_string(),
@@ -79,6 +111,7 @@ impl std::str::FromStr for ChatCommand {
 pub enum MessageType {
     Authenticated,
     Guests { count: i64 },
+    Advance(AdvanceMessage),
     ChatMessage(ChatMessage),
     WaitlistUpdate { user_ids: Vec<String> },
 }
@@ -97,6 +130,7 @@ impl Message {
             "guests" => Some(MessageType::Guests {
                 count: self.data.as_i64()?,
             }),
+            "advance" => Some(MessageType::Advance(serde_json::from_value(self.data).ok()?)),
             "chatMessage" => {
                 let mut chat_message: ChatMessage = serde_json::from_value(self.data).ok()?;
                 chat_message.parse();
@@ -126,19 +160,24 @@ impl Api {
     pub async fn exit(&self) {
         self.0.send(ApiMessage::Exit).await;
     }
+
+    pub async fn skip(&self) -> Result<()> {
+        bail!("unimplemented")
+    }
 }
 
 #[async_trait::async_trait]
 pub trait Handler: std::fmt::Debug {
-    async fn handle(&mut self, bot: Api, message: &MessageType) -> anyhow::Result<()>;
+    async fn handle(&mut self, bot: Api, message: &MessageType) -> Result<()>;
 }
 
 #[cfg(test)]
 mod tests {
     use super::parse_message;
+    use anyhow::Result;
 
     #[test]
-    fn message_parser() -> anyhow::Result<()> {
+    fn message_parser() -> Result<()> {
         assert_eq!(parse_message("!e test")?, ("e", vec!["test"]),);
         assert_eq!(
             parse_message("!addemote \"test\" https://wlk.yt/assets/emoji/1f604.png")?,

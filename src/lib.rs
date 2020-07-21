@@ -2,11 +2,11 @@
 mod emotes;
 mod exit;
 mod handler;
+mod skiplist;
 
 use crate::handler::Handler;
-use async_std::net::TcpStream;
 use async_std::sync::channel;
-use async_tungstenite::async_std::connect_async;
+use async_tungstenite::async_std::{connect_async, ConnectStream};
 use async_tungstenite::tungstenite::Message;
 use async_tungstenite::WebSocketStream;
 use futures::prelude::*;
@@ -20,10 +20,9 @@ pub struct ConnectionOptions {
     pub password: String,
 }
 
-#[derive(Debug)]
 pub struct SekshiBot {
     database: Db,
-    socket: WebSocketStream<TcpStream>,
+    socket: WebSocketStream<ConnectStream>,
     handlers: Vec<Box<dyn Handler + Send>>,
 }
 
@@ -80,6 +79,8 @@ impl SekshiBot {
         let emotes = emotes::Emotes::new(&mut bot)?;
         bot.add_handler(emotes);
         bot.add_handler(exit::Exit);
+        let skiplist = skiplist::SkipList::new(&mut bot, &now)?;
+        bot.add_handler(skiplist);
 
         Ok(bot)
     }

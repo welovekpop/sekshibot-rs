@@ -14,7 +14,7 @@ pub struct Cli {
 }
 
 fn main() -> anyhow::Result<()> {
-    femme::with_level(log::LevelFilter::Trace);
+    femme::with_level(log::LevelFilter::Info);
     let args = Cli::parse_args_or_exit(ParsingStyle::AllOptions);
     log::info!("args: {:?}", args);
 
@@ -26,8 +26,6 @@ fn main() -> anyhow::Result<()> {
             password: std::env::var("SEKSHIBOT_PASSWORD").unwrap(),
         })
         .await?;
-
-        log::trace!("Bot: {:?}", bot);
 
         bot.run().await?;
         Ok(())
