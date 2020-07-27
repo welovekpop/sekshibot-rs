@@ -3,6 +3,7 @@ mod emotes;
 mod exit;
 mod handler;
 mod skiplist;
+mod uwave;
 
 use crate::handler::Handler;
 use async_std::sync::channel;
@@ -11,6 +12,7 @@ use async_tungstenite::tungstenite::Message;
 use async_tungstenite::WebSocketStream;
 use futures::prelude::*;
 use sled::Db;
+use crate::uwave::HttpApi;
 
 #[derive(Debug, Clone)]
 pub struct ConnectionOptions {
@@ -23,6 +25,7 @@ pub struct ConnectionOptions {
 pub struct SekshiBot {
     database: Db,
     socket: WebSocketStream<ConnectStream>,
+    api_url: String,
     handlers: Vec<Box<dyn Handler + Send>>,
 }
 
@@ -73,6 +76,7 @@ impl SekshiBot {
         let mut bot = Self {
             database,
             socket,
+            api_url: options.api_url,
             handlers: vec![],
         };
 
@@ -98,6 +102,7 @@ impl SekshiBot {
 
         let mut socket = self.socket.fuse();
         let mut handlers = self.handlers;
+        let http_api = HttpApi::new(self.api_url);
 
         let socket_stream = async move {
             loop {
@@ -151,7 +156,7 @@ impl SekshiBot {
         let handle_messages = async move {
             while let Some(message) = received_message_receiver.next().await {
                 log::info!("handling message {:?}", message);
-                let api = handler::Api::new(api_sender.clone());
+                let api = handler::Api::new(api_sender.clone(), http_api.clone());
                 for handler in handlers.iter_mut() {
                     match handler.handle(api.clone(), &message).await {
                         Ok(..) => (),

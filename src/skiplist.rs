@@ -1,8 +1,10 @@
 use crate::handler::{AdvanceMessage, Api, ChatCommand, ChatMessage, Handler, MessageType};
+use crate::uwave::SkipOptions;
 use crate::SekshiBot;
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
+use std::fmt::{self, Display, Formatter};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct Media {
@@ -10,18 +12,28 @@ struct Media {
     source_id: String,
 }
 
-impl FromStr for Media {
-    type Err = anyhow::Error;
+#[derive(Debug, thiserror::Error)]
+#[error("failed to parse media ID. expected format: `sourcetype:id`")]
+pub struct ParseMediaIDError;
 
-    fn from_str(s: &str) -> Result<Self> {
+impl FromStr for Media {
+    type Err = ParseMediaIDError;
+
+    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
         let mut parts = s.splitn(2, ':');
         match (parts.next(), parts.next()) {
             (Some(source_type), Some(source_id)) => Ok(Self {
                 source_type: source_type.to_string(),
                 source_id: source_id.to_string(),
             }),
-            _ => anyhow::bail!("expected format: `sourcetype:id`"),
+            _ => Err(ParseMediaIDError),
         }
+    }
+}
+
+impl Display for Media {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(f, "{}:{}", self.source_type, self.source_id)
     }
 }
 
@@ -53,7 +65,7 @@ impl SkipList {
     }
 
     fn add_skip_entry(&mut self, media: Media, reason: &str) -> Result<()> {
-        let media = bincode::serialize(&media)?;
+        let media = media.to_string();
         let entry = bincode::serialize(&SkipEntry {
             reason: reason.to_string(),
         })?;
@@ -63,9 +75,9 @@ impl SkipList {
     }
 
     fn get_skip_entry(&mut self, media: &Media) -> Result<Option<SkipEntry>> {
-        let media = bincode::serialize(media)?;
+        let media = media.to_string();
         log::info!("check entry {:?}", media);
-        if let Some(entry) = self.tree.get(&media)? {
+        if let Some(entry) = self.tree.get(media)? {
             let entry = bincode::deserialize(&entry)?;
             Ok(Some(entry))
         } else {
@@ -110,8 +122,11 @@ impl SkipList {
         };
 
         if let Some(entry) = self.get_skip_entry(&media)? {
-            api.send_message(format!("This track is on the autoskip list: {}", entry.reason)).await;
-            api.skip().await?;
+            api.http.skip(SkipOptions {
+                user_id: message.user_id.clone(),
+                reason: Some(format!("This track is on the autoskip list: {}", entry.reason)),
+                remove: false,
+            }).await?;
             Ok(())
         } else {
             Ok(())

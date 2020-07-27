@@ -2,6 +2,7 @@ use anyhow::{bail, Error, Result};
 use async_std::sync::Sender;
 use serde::Deserialize;
 use std::fmt::Display;
+use crate::uwave::HttpApi;
 
 fn parse_message(input: &str) -> Result<(&str, Vec<&str>)> {
     use nom::branch::alt;
@@ -40,6 +41,8 @@ fn parse_message(input: &str) -> Result<(&str, Vec<&str>)> {
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct BaseMedia {
+    #[serde(rename = "_id")]
+    pub id: String,
     #[serde(rename = "sourceType")]
     pub source_type: String,
     #[serde(rename = "sourceID")]
@@ -147,22 +150,24 @@ pub enum ApiMessage {
 }
 
 #[derive(Clone)]
-pub struct Api(Sender<ApiMessage>);
+pub struct Api {
+    sender: Sender<ApiMessage>,
+    pub http: HttpApi,
+}
 impl Api {
-    pub fn new(sender: Sender<ApiMessage>) -> Self {
-        Self(sender)
+    pub fn new(sender: Sender<ApiMessage>, http: HttpApi) -> Self {
+        Self {
+            sender,
+            http,
+        }
     }
 
     pub async fn send_message(&self, message: impl Display) {
-        self.0.send(ApiMessage::SendChat(message.to_string())).await;
+        self.sender.send(ApiMessage::SendChat(message.to_string())).await;
     }
 
     pub async fn exit(&self) {
-        self.0.send(ApiMessage::Exit).await;
-    }
-
-    pub async fn skip(&self) -> Result<()> {
-        bail!("unimplemented")
+        self.sender.send(ApiMessage::Exit).await;
     }
 }
 
