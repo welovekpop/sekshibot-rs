@@ -66,7 +66,7 @@ impl SkipList {
 
     fn add_skip_entry(&mut self, media: Media, reason: &str) -> Result<()> {
         let media = media.to_string();
-        let entry = bincode::serialize(&SkipEntry {
+        let entry = serde_json::to_vec(&SkipEntry {
             reason: reason.to_string(),
         })?;
         log::info!("add entry {:?} {:?}", media, entry);
@@ -78,7 +78,7 @@ impl SkipList {
         let media = media.to_string();
         log::info!("check entry {:?}", media);
         if let Some(entry) = self.tree.get(media)? {
-            let entry = bincode::deserialize(&entry)?;
+            let entry = serde_json::from_slice(&entry)?;
             Ok(Some(entry))
         } else {
             Ok(None)
