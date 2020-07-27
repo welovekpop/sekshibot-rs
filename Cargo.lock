@@ -301,6 +301,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "css-rel-preload"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ae749d21f8ee4e58466483eda3153cc973d42bf153facd82184777fd18d86618"
+
+[[package]]
 name = "digest"
 version = "0.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -530,6 +536,14 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3deed196b6e7f9e44a2ae8d94225d80302d81208b1bb673fd21fe634645c85a9"
 dependencies = [
  "libc",
+]
+
+[[package]]
+name = "html-index"
+version = "0.3.2"
+source = "git+https://github.com/http-rs/html-index.git?branch=opt-http-types#2eb439f757108220b4a3b63d5ae97c60028284cb"
+dependencies = [
+ "css-rel-preload",
 ]
 
 [[package]]
@@ -962,11 +976,13 @@ dependencies = [
  "femme",
  "futures",
  "gumdrop",
+ "html-index",
  "log",
  "nom",
  "serde",
  "serde_json",
  "sled",
+ "tachyons",
  "thiserror",
  "ureq",
 ]
@@ -1177,6 +1193,12 @@ dependencies = [
  "quote",
  "unicode-xid",
 ]
+
+[[package]]
+name = "tachyons"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "26d40c7b1532b4d48f6affec0d9f58795be657dc5394d0c45b0e68768b91d2f7"
 
 [[package]]
 name = "thiserror"

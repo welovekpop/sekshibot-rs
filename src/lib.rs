@@ -2,6 +2,7 @@
 mod emotes;
 mod exit;
 mod handler;
+mod neocities;
 mod skiplist;
 mod uwave;
 
