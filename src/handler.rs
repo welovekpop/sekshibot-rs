@@ -1,5 +1,5 @@
 use anyhow::{bail, Error, Result};
-use async_std::sync::Sender;
+use async_channel::Sender;
 use serde::Deserialize;
 use std::fmt::Display;
 use crate::uwave::HttpApi;
@@ -163,11 +163,11 @@ impl Api {
     }
 
     pub async fn send_message(&self, message: impl Display) {
-        self.sender.send(ApiMessage::SendChat(message.to_string())).await;
+        self.sender.send(ApiMessage::SendChat(message.to_string())).await.unwrap();
     }
 
     pub async fn exit(&self) {
-        self.sender.send(ApiMessage::Exit).await;
+        self.sender.send(ApiMessage::Exit).await.unwrap();
     }
 }
 

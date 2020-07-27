@@ -6,7 +6,6 @@ mod skiplist;
 mod uwave;
 
 use crate::handler::Handler;
-use async_std::sync::channel;
 use async_tungstenite::async_std::{connect_async, ConnectStream};
 use async_tungstenite::tungstenite::Message;
 use async_tungstenite::WebSocketStream;
@@ -94,8 +93,8 @@ impl SekshiBot {
     }
 
     pub async fn run(self) -> anyhow::Result<()> {
-        let (api_sender, api_receiver) = channel(10);
-        let (received_message_sender, received_message_receiver) = channel(10);
+        let (api_sender, api_receiver) = async_channel::bounded(10);
+        let (received_message_sender, received_message_receiver) = async_channel::bounded(10);
 
         let mut api_receiver = api_receiver.fuse();
         let mut received_message_receiver = received_message_receiver.fuse();
@@ -132,7 +131,7 @@ impl SekshiBot {
                         let message: handler::Message = serde_json::from_str(&message).unwrap();
 
                         if let Some(message_type) = message.into_message_type() {
-                            received_message_sender.send(message_type).await;
+                            let _ = received_message_sender.send(message_type).await;
                         }
                     },
                     message = api_receiver.next() => match message {
