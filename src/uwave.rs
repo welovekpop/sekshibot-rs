@@ -1,8 +1,8 @@
 use crate::handler::MediaWithOverrides;
 use anyhow::Result;
 use chrono::{DateTime, Utc};
-use serde_json::json;
 use serde::Deserialize;
+use serde_json::json;
 
 #[derive(Debug, Clone, Deserialize)]
 struct Links {
@@ -91,7 +91,8 @@ impl HttpApi {
                 req.query("filter[media]", &id);
             }
 
-            req.call().into_json_deserialize::<ResponseData<_, PageMeta>>()
+            req.call()
+                .into_json_deserialize::<ResponseData<_, PageMeta>>()
         })
         .await?;
 
@@ -105,7 +106,8 @@ impl HttpApi {
                 "reason": opts.reason.unwrap_or_default(),
                 "userID": opts.user_id,
                 "remove": opts.remove,
-            })).into_json_deserialize()
+            }))
+            .into_json_deserialize()
         })
         .await?;
 

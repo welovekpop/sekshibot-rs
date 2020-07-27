@@ -1,8 +1,8 @@
+use crate::uwave::HttpApi;
 use anyhow::{bail, Error, Result};
 use async_channel::Sender;
 use serde::Deserialize;
 use std::fmt::Display;
-use crate::uwave::HttpApi;
 
 fn parse_message(input: &str) -> Result<(&str, Vec<&str>)> {
     use nom::branch::alt;
@@ -133,7 +133,9 @@ impl Message {
             "guests" => Some(MessageType::Guests {
                 count: self.data.as_i64()?,
             }),
-            "advance" => Some(MessageType::Advance(serde_json::from_value(self.data).ok()?)),
+            "advance" => Some(MessageType::Advance(
+                serde_json::from_value(self.data).ok()?,
+            )),
             "chatMessage" => {
                 let mut chat_message: ChatMessage = serde_json::from_value(self.data).ok()?;
                 chat_message.parse();
@@ -156,14 +158,14 @@ pub struct Api {
 }
 impl Api {
     pub fn new(sender: Sender<ApiMessage>, http: HttpApi) -> Self {
-        Self {
-            sender,
-            http,
-        }
+        Self { sender, http }
     }
 
     pub async fn send_message(&self, message: impl Display) {
-        self.sender.send(ApiMessage::SendChat(message.to_string())).await.unwrap();
+        self.sender
+            .send(ApiMessage::SendChat(message.to_string()))
+            .await
+            .unwrap();
     }
 
     pub async fn exit(&self) {

@@ -7,12 +7,12 @@ mod skiplist;
 mod uwave;
 
 use crate::handler::Handler;
+use crate::uwave::HttpApi;
 use async_tungstenite::async_std::{connect_async, ConnectStream};
 use async_tungstenite::tungstenite::Message;
 use async_tungstenite::WebSocketStream;
 use futures::prelude::*;
 use sled::Db;
-use crate::uwave::HttpApi;
 
 #[derive(Debug, Clone)]
 pub struct ConnectionOptions {

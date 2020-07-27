@@ -3,8 +3,8 @@ use crate::uwave::SkipOptions;
 use crate::SekshiBot;
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
-use std::str::FromStr;
 use std::fmt::{self, Display, Formatter};
+use std::str::FromStr;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct Media {
@@ -122,11 +122,16 @@ impl SkipList {
         };
 
         if let Some(entry) = self.get_skip_entry(&media)? {
-            api.http.skip(SkipOptions {
-                user_id: message.user_id.clone(),
-                reason: Some(format!("This track is on the autoskip list: {}", entry.reason)),
-                remove: false,
-            }).await?;
+            api.http
+                .skip(SkipOptions {
+                    user_id: message.user_id.clone(),
+                    reason: Some(format!(
+                        "This track is on the autoskip list: {}",
+                        entry.reason
+                    )),
+                    remove: false,
+                })
+                .await?;
             Ok(())
         } else {
             Ok(())
