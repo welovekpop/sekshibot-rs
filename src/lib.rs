@@ -2,6 +2,7 @@
 mod emotes;
 mod exit;
 mod handler;
+mod historyskip;
 mod neocities;
 mod skiplist;
 mod uwave;
@@ -28,6 +29,7 @@ pub struct SekshiBot {
     database: Db,
     socket: WebSocketStream<ConnectStream>,
     api_url: String,
+    api_auth: String,
     handlers: Vec<Box<dyn Handler + Send>>,
 }
 
@@ -55,11 +57,12 @@ impl SekshiBot {
         } else {
             anyhow::bail!("no jwt found")
         };
+        let api_auth = format!("JWT {}", jwt);
 
         log::info!("loading state...");
         let now = {
             let req = Request::get(&url("now"))
-                .header("Authorization", &format!("JWT {}", jwt))
+                .header("Authorization", &api_auth)
                 .with_body(())?;
             let response = agent.send(req).await?;
             response
@@ -89,6 +92,7 @@ impl SekshiBot {
             database,
             socket,
             api_url: options.api_url,
+            api_auth,
             handlers: vec![],
         };
 
@@ -97,6 +101,7 @@ impl SekshiBot {
         bot.add_handler(exit::Exit);
         let skiplist = skiplist::SkipList::new(&mut bot, &now)?;
         bot.add_handler(skiplist);
+        bot.add_handler(historyskip::HistorySkip);
 
         Ok(bot)
     }
@@ -114,7 +119,7 @@ impl SekshiBot {
 
         let mut socket = self.socket.fuse();
         let mut handlers = self.handlers;
-        let http_api = HttpApi::new(self.api_url);
+        let http_api = HttpApi::new(&self.api_url, &self.api_auth);
 
         let socket_stream = async move {
             loop {

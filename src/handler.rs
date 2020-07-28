@@ -1,4 +1,4 @@
-use crate::uwave::HttpApi;
+use crate::uwave::{BaseMedia, HttpApi, MediaWithOverrides};
 use anyhow::{bail, Error, Result};
 use async_channel::Sender;
 use serde::Deserialize;
@@ -40,34 +40,12 @@ fn parse_message(input: &str) -> Result<(&str, Vec<&str>)> {
 }
 
 #[derive(Debug, Clone, Deserialize)]
-pub struct BaseMedia {
-    #[serde(rename = "_id")]
-    pub id: String,
-    #[serde(rename = "sourceType")]
-    pub source_type: String,
-    #[serde(rename = "sourceID")]
-    pub source_id: String,
-    pub artist: String,
-    pub title: String,
-    pub duration: u32,
-}
-
-#[derive(Debug, Clone, Deserialize)]
-pub struct MediaWithOverrides {
-    pub media: BaseMedia,
-    pub artist: String,
-    pub title: String,
-    pub start: u32,
-    pub end: u32,
-}
-
-#[derive(Debug, Clone, Deserialize)]
 pub struct AdvanceMessage {
     #[serde(rename = "historyID")]
     pub history_id: String,
     #[serde(rename = "userID")]
     pub user_id: String,
-    pub media: MediaWithOverrides,
+    pub media: MediaWithOverrides<BaseMedia>,
     #[serde(rename = "playedAt")]
     pub played_at: u64,
 }
@@ -152,12 +130,12 @@ pub enum ApiMessage {
 }
 
 #[derive(Clone)]
-pub struct Api {
+pub struct Api<'s> {
     sender: Sender<ApiMessage>,
-    pub http: HttpApi,
+    pub http: HttpApi<'s>,
 }
-impl Api {
-    pub fn new(sender: Sender<ApiMessage>, http: HttpApi) -> Self {
+impl<'s> Api<'s> {
+    pub fn new(sender: Sender<ApiMessage>, http: HttpApi<'s>) -> Self {
         Self { sender, http }
     }
 
@@ -175,7 +153,7 @@ impl Api {
 
 #[async_trait::async_trait]
 pub trait Handler: std::fmt::Debug {
-    async fn handle(&mut self, bot: Api, message: &MessageType) -> Result<()>;
+    async fn handle(&mut self, bot: Api<'_>, message: &MessageType) -> Result<()>;
 }
 
 #[cfg(test)]

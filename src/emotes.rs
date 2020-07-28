@@ -74,7 +74,7 @@ impl Emotes {
 
 #[async_trait::async_trait]
 impl Handler for Emotes {
-    async fn handle(&mut self, api: Api, message: &MessageType) -> anyhow::Result<()> {
+    async fn handle(&mut self, api: Api<'_>, message: &MessageType) -> anyhow::Result<()> {
         let message = match message {
             MessageType::ChatMessage(message) => message,
             _ => return Ok(()),

@@ -1,9 +1,30 @@
-use crate::handler::MediaWithOverrides;
 use anyhow::Result;
 use chrono::{DateTime, Utc};
 use hreq::prelude::*;
 use serde::Deserialize;
 use serde_json::json;
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct BaseMedia {
+    #[serde(rename = "_id")]
+    pub id: String,
+    #[serde(rename = "sourceType")]
+    pub source_type: String,
+    #[serde(rename = "sourceID")]
+    pub source_id: String,
+    pub artist: String,
+    pub title: String,
+    pub duration: u32,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct MediaWithOverrides<T> {
+    pub media: T,
+    pub artist: String,
+    pub title: String,
+    pub start: u32,
+    pub end: u32,
+}
 
 #[derive(Debug, Clone, Deserialize)]
 struct Links {
@@ -23,10 +44,11 @@ struct PageMeta {
 }
 
 #[derive(Debug, Clone, Deserialize)]
-struct ResponseData<Data, Meta> {
+struct ResponseData<Data, Meta, Included> {
     pub data: Data,
     pub links: Links,
     pub meta: Meta,
+    pub included: Included,
 }
 
 #[derive(Debug, Clone)]
@@ -58,8 +80,8 @@ pub struct SkipOptions {
 }
 
 #[derive(Debug, Clone, Deserialize)]
-pub struct HistoryEntry {
-    pub media: MediaWithOverrides,
+pub struct HistoryEntry<TMedia> {
+    pub media: MediaWithOverrides<TMedia>,
     upvotes: Vec<String>,
     downvotes: Vec<String>,
     favorites: Vec<String>,
@@ -72,37 +94,72 @@ pub struct HistoryEntry {
 }
 
 #[derive(Debug, Clone)]
-pub struct HttpApi {
-    api_url: String,
+pub struct HttpApi<'s> {
+    api_url: &'s str,
+    auth: &'s str,
 }
 
-impl HttpApi {
-    pub fn new(api_url: String) -> Self {
-        Self { api_url }
+impl<'s> HttpApi<'s> {
+    pub fn new(api_url: &'s str, auth: &'s str) -> Self {
+        Self { api_url, auth }
     }
 
     fn url(&self, endpoint: &str) -> String {
         format!("{}/{}", self.api_url, endpoint)
     }
 
-    pub async fn history(&self, opts: HistoryOptions) -> Result<Vec<HistoryEntry>> {
+    pub async fn history(&self, opts: HistoryOptions) -> Result<Vec<HistoryEntry<BaseMedia>>> {
         let mut req = Request::get(&self.url("booth/history"));
         if let Some(id) = opts.media {
             req = req.query("filter[media]", &id);
         }
 
+        #[derive(Debug, Deserialize)]
+        struct IncludeHistory {
+            media: Vec<BaseMedia>,
+        }
+
+        type ResponseShape = ResponseData<Vec<HistoryEntry<String>>, PageMeta, IncludeHistory>;
+
         let response = req
             .call()
             .await?
             .into_body()
-            .read_to_json::<ResponseData<_, PageMeta>>()
+            .read_to_json::<ResponseShape>()
             .await?;
 
-        Ok(dbg!(response).data)
+        let ResponseData { data, included, .. } = response;
+
+        let entries = data
+            .into_iter()
+            .map(|entry| HistoryEntry {
+                media: MediaWithOverrides {
+                    media: included
+                        .media
+                        .iter()
+                        .find(|media| media.id == entry.media.media)
+                        .unwrap()
+                        .clone(),
+                    artist: entry.media.artist,
+                    title: entry.media.title,
+                    start: entry.media.start,
+                    end: entry.media.end,
+                },
+                upvotes: entry.upvotes,
+                downvotes: entry.downvotes,
+                favorites: entry.favorites,
+                history_id: entry.history_id,
+                user_id: entry.user_id,
+                played_at: entry.played_at,
+            })
+            .collect();
+
+        Ok(entries)
     }
 
     pub async fn skip(&self, opts: SkipOptions) -> Result<()> {
         let response = Request::post(&self.url("booth/skip"))
+            .header("Authorization", self.auth)
             .send_json(&json!({
                 "reason": opts.reason.unwrap_or_default(),
                 "userID": opts.user_id,
@@ -110,8 +167,10 @@ impl HttpApi {
             }))
             .await?;
 
-        let json = response.into_body().read_to_json().await?;
+        let json: serde_json::Value = response.into_body().read_to_json().await?;
 
-        Ok(json)
+        dbg!(json);
+
+        Ok(())
     }
 }

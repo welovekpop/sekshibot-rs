@@ -85,7 +85,7 @@ impl SkipList {
         }
     }
 
-    async fn handle_chat_message(&mut self, api: Api, message: &ChatMessage) -> Result<()> {
+    async fn handle_chat_message(&mut self, api: Api<'_>, message: &ChatMessage) -> Result<()> {
         let ChatCommand { command, arguments } = match message.command() {
             Some(c) => c,
             None => return Ok(()),
@@ -115,7 +115,7 @@ impl SkipList {
         }
     }
 
-    async fn handle_advance(&mut self, api: Api, message: &AdvanceMessage) -> Result<()> {
+    async fn handle_advance(&mut self, api: Api<'_>, message: &AdvanceMessage) -> Result<()> {
         let media = Media {
             source_type: message.media.media.source_type.clone(),
             source_id: message.media.media.source_id.clone(),
@@ -141,7 +141,7 @@ impl SkipList {
 
 #[async_trait::async_trait]
 impl Handler for SkipList {
-    async fn handle(&mut self, api: Api, message: &MessageType) -> Result<()> {
+    async fn handle(&mut self, api: Api<'_>, message: &MessageType) -> Result<()> {
         match message {
             MessageType::ChatMessage(message) => self.handle_chat_message(api, message).await,
             MessageType::Advance(message) => self.handle_advance(api, message).await,
