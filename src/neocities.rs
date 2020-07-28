@@ -1,4 +1,3 @@
-use hreq::http::uri::Authority;
 use hreq::prelude::*;
 use hreq::Agent;
 use nanofd::FormData;

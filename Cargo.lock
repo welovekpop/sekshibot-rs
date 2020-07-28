@@ -250,12 +250,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "chunked_transfer"
-version = "1.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1d29eb15132782371f71da8f947dba48b3717bdb6fa771b9b434d645e40a7193"
-
-[[package]]
 name = "cloudabi"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -271,16 +265,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f83c06aff61f2d899eb87c379df3cbf7876f14471dcab474e0b6dc90ab96c080"
 dependencies = [
  "cache-padded",
-]
-
-[[package]]
-name = "cookie"
-version = "0.13.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0c60ef6d0bbf56ad2674249b6bb74f2c6aeb98b98dd57b5d3e37cace33011d69"
-dependencies = [
- "percent-encoding",
- "time 0.2.16",
 ]
 
 [[package]]
@@ -616,7 +600,7 @@ dependencies = [
  "async-std",
  "async-trait",
  "bytes",
- "cookie 0.14.2",
+ "cookie",
  "encoding_rs",
  "flate2",
  "futures-io",
@@ -1169,7 +1153,6 @@ dependencies = [
  "sled",
  "tachyons",
  "thiserror",
- "ureq",
 ]
 
 [[package]]
@@ -1513,25 +1496,6 @@ name = "untrusted"
 version = "0.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a156c684c91ea7d62626509bce3cb4e1d9ed5c4d978f7b4352658f96a4c26b4a"
-
-[[package]]
-name = "ureq"
-version = "1.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "677df6896edc382f1a2abcbb3e4058edfe973cdc4e1ed764b11891a7a289bfc0"
-dependencies = [
- "base64 0.12.3",
- "chunked_transfer",
- "cookie 0.13.3",
- "lazy_static",
- "qstring",
- "rustls",
- "serde",
- "serde_json",
- "url",
- "webpki",
- "webpki-roots",
-]
 
 [[package]]
 name = "url"
