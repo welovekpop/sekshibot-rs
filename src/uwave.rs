@@ -1,6 +1,7 @@
 use crate::handler::MediaWithOverrides;
 use anyhow::Result;
 use chrono::{DateTime, Utc};
+use hreq::prelude::*;
 use serde::Deserialize;
 use serde_json::json;
 
@@ -85,32 +86,32 @@ impl HttpApi {
     }
 
     pub async fn history(&self, opts: HistoryOptions) -> Result<Vec<HistoryEntry>> {
-        let mut req = ureq::get(&self.url("booth/history"));
-        let response = async_std::task::spawn(async move {
-            if let Some(id) = opts.media {
-                req.query("filter[media]", &id);
-            }
+        let mut req = Request::get(&self.url("booth/history"));
+        if let Some(id) = opts.media {
+            req = req.query("filter[media]", &id);
+        }
 
-            req.call()
-                .into_json_deserialize::<ResponseData<_, PageMeta>>()
-        })
-        .await?;
+        let response = req
+            .call()
+            .await?
+            .into_body()
+            .read_to_json::<ResponseData<_, PageMeta>>()
+            .await?;
 
         Ok(dbg!(response).data)
     }
 
     pub async fn skip(&self, opts: SkipOptions) -> Result<()> {
-        let mut req = ureq::post(&self.url("booth/skip"));
-        let response = async_std::task::spawn(async move {
-            req.send_json(json!({
+        let response = Request::post(&self.url("booth/skip"))
+            .send_json(&json!({
                 "reason": opts.reason.unwrap_or_default(),
                 "userID": opts.user_id,
                 "remove": opts.remove,
             }))
-            .into_json_deserialize()
-        })
-        .await?;
+            .await?;
 
-        Ok(response)
+        let json = response.into_body().read_to_json().await?;
+
+        Ok(json)
     }
 }
