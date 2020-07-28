@@ -1,6 +1,8 @@
 use hreq::prelude::*;
 use hreq::Agent;
 use nanofd::FormData;
+use serde::Deserialize;
+use sha1::Sha1;
 use std::io::Cursor;
 use thiserror::Error;
 
@@ -18,12 +20,49 @@ pub enum PublishError {
     JsonError(#[from] std::io::Error),
 }
 
+#[derive(Debug, Deserialize)]
+struct FileEntry {
+    is_directory: bool,
+    path: String,
+    sha1_hash: String,
+    size: u32,
+    updated_at: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct ListResponse {
+    files: Vec<FileEntry>,
+    result: String,
+}
+
+fn list(username: &str, password: &str) -> Request<hreq::Body> {
+    let auth = base64::encode(format!("{}:{}", username, password));
+
+    Request::get("https://neocities.org/api/list")
+        .header("authorization", format!("Basic {}", auth))
+        .with_body(())
+        .unwrap()
+}
+
+/// Returns the URL to the page.
 pub async fn publish(page_name: &str, content: &str) -> Result<String, PublishError> {
     let username = std::env::var("NEOCITIES_USERNAME").map_err(|_| PublishError::MissingAuth)?;
     let password = std::env::var("NEOCITIES_PASSWORD").map_err(|_| PublishError::MissingAuth)?;
 
     let mut agent = Agent::new();
 
+    let response = agent.send(list(&username, &password)).await?;
+    let ListResponse { files, .. } = response.into_body().read_to_json().await?;
+    if let Some(existing_page) = files.into_iter().find(|file| file.path == page_name) {
+        let digest = Sha1::from(content).digest();
+
+        if existing_page.sha1_hash == digest.to_string() {
+            log::info!("not reuploading page {}", page_name);
+            return Ok(format!("https://{}.neocities.org/{}", username, page_name));
+        }
+    }
+
+    log::info!("uploading page {}", page_name);
     let mut form_data = FormData::new(Cursor::new(vec![]));
     let content_type = form_data.content_type();
     form_data.append_file(page_name, "text/html", &mut content.as_bytes())?;
