@@ -1,6 +1,6 @@
 use hreq::prelude::*;
 use hreq::Agent;
-use nanofd::FormData;
+use yolofd::FormData;
 use serde::Deserialize;
 use sha1::Sha1;
 use std::io::Cursor;
