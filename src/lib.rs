@@ -1,4 +1,4 @@
-#![recursion_limit = "256"]
+#![recursion_limit = "512"]
 mod handler;
 mod handlers;
 mod api {
@@ -126,9 +126,43 @@ impl SekshiBot {
         let mut handlers = self.handlers;
         let http_api = HttpApi::new(self.agent, &self.api_url, &self.api_auth);
 
+        #[cfg(unix)]
+        let mut signal_receiver = {
+            use async_std::os::unix::net::UnixStream;
+            use signal_hook::pipe::register;
+            use signal_hook::SIGINT;
+
+            let (sender, receiver) = UnixStream::pair()?;
+            register(SIGINT, sender)?;
+            receiver
+        };
+        #[cfg(not(unix))]
+        let mut signal_receiver = {
+            use async_std::io::Read;
+            use std::pin::Pin;
+            use std::task::{Context, Poll};
+
+            struct NeverReady;
+            impl Read for NeverReady {
+                fn poll_read(
+                    self: Pin<&mut Self>,
+                    _: &mut Context,
+                    _: &mut [u8],
+                ) -> Poll<Result<usize>> {
+                    Poll::Pending
+                }
+            }
+            NeverReady
+        };
+
+        let exit_sender = api_sender.clone();
+        let mut signal_buffer = [0u8];
         let socket_stream = async move {
             loop {
                 futures::select!(
+                    _ = signal_receiver.read_exact(&mut signal_buffer).fuse() => {
+                        exit_sender.send(handler::ApiMessage::Exit).await?;
+                    }
                     message = socket.try_next() => {
                         let message = match message {
                             Ok(Some(Message::Text(message))) => {
@@ -159,12 +193,14 @@ impl SekshiBot {
                     },
                     message = api_receiver.next() => match message {
                         Some(handler::ApiMessage::SendChat(message)) => {
+                            log::info!("sending chat message: {}", message);
                             socket.send(Message::Text(serde_json::json!({
                                 "command": "sendChat",
                                 "data": message,
                             }).to_string())).await?;
                         }
                         Some(handler::ApiMessage::Exit) | None => {
+                            log::info!("logging out");
                             socket.send(Message::Text(serde_json::json!({ "command": "logout" }).to_string())).await?;
                             socket.close().await?;
                             break
@@ -179,7 +215,7 @@ impl SekshiBot {
         let handle_messages = async move {
             let mut retval = Ok(());
 
-            while let Some(message) = received_message_receiver.next().await {
+            'outer: while let Some(message) = received_message_receiver.next().await {
                 log::info!("handling message {:?}", message);
                 let api = handler::Api::new(api_sender.clone(), http_api.clone());
                 for handler in handlers.iter_mut() {
@@ -190,7 +226,7 @@ impl SekshiBot {
                             if err.is::<UnauthorizedError>() {
                                 api.exit().await;
                                 retval = Err(err);
-                                break;
+                                break 'outer;
                             }
 
                             api.send_message(format_args!("Could not handle message: {}", err))
