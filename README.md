@@ -35,7 +35,7 @@ You can autorestart it with systemd or a similar system. If someone does `!exit`
 | `!e [emote]` | Display a reaction gif. |
 | `!addemote [emote] [url]` | Add a new reaction gif. |
 | `!emotes` | Send a link to a page with all the reaction gifs. |
-| `!skiplist add [media] "[reason]" | Add a song to the autoskip list. `[media]` is formatted as sourcetype:id, eg. `youtube:123456abc` |
+| `!skiplist add [media] "[reason]"` | Add a song to the autoskip list. `[media]` is formatted as sourcetype:id, eg. `youtube:123456abc` |
 
 ## License
 [GPL-3.0](./LICENSE.md)
