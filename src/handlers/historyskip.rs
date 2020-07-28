@@ -22,11 +22,18 @@ impl Handler for HistorySkip {
             })
             .await?;
 
-        if results.len() < 2 {
-            return Ok(());
-        }
+        let recent_entry = results
+            .into_iter()
+            // Skip the currently playing entry.
+            .skip(1)
+            .find(|entry| entry.media.media.id == message.media.media.id);
 
-        let time = results[1].played_at;
+        let recent_entry = match recent_entry {
+            Some(entry) => entry,
+            None => return Ok(()),
+        };
+
+        let time = recent_entry.played_at;
         let ago = Utc::now() - time;
         if ago < Duration::hours(1) {
             log::info!("skipping because this song was played {} ago", ago);
