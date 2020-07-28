@@ -1,5 +1,6 @@
 use gumdrop::{Options, ParsingStyle};
 use sekshibot::{ConnectionOptions, SekshiBot};
+use anyhow::{bail, Result};
 
 ///
 #[derive(Debug, Clone, Options)]
@@ -13,17 +14,26 @@ pub struct Cli {
     pub help: bool,
 }
 
-fn main() -> anyhow::Result<()> {
+fn main() -> Result<()> {
     femme::with_level(log::LevelFilter::Info);
     let args = Cli::parse_args_or_exit(ParsingStyle::AllOptions);
     log::info!("args: {:?}", args);
+
+    let email = match std::env::var("SEKSHIBOT_EMAIL") {
+        Ok(email) => email,
+        _ => bail!("missing SEKSHIBOT_EMAIL env var"),
+    };
+    let password = match std::env::var("SEKSHIBOT_PASSWORD") {
+        Ok(password) => password,
+        _ => bail!("missing SEKSHIBOT_PASSWORD env var"),
+    };
 
     async_std::task::block_on(async move {
         let bot = SekshiBot::connect(ConnectionOptions {
             api_url: args.api_url,
             socket_url: args.socket_url,
-            email: std::env::var("SEKSHIBOT_EMAIL").unwrap(),
-            password: std::env::var("SEKSHIBOT_PASSWORD").unwrap(),
+            email,
+            password,
         })
         .await?;
 
