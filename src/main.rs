@@ -1,6 +1,6 @@
 use anyhow::{bail, Result};
 use gumdrop::{Options, ParsingStyle};
-use sekshibot::{ConnectionOptions, SekshiBot};
+use sekshibot::{ConnectionOptions, SekshiBot, UnauthorizedError};
 
 ///
 #[derive(Debug, Clone, Options)]
@@ -28,7 +28,7 @@ fn main() -> Result<()> {
         _ => bail!("missing SEKSHIBOT_PASSWORD env var"),
     };
 
-    async_std::task::block_on(async move {
+    let result = async_std::task::block_on(async move {
         let bot = SekshiBot::connect(ConnectionOptions {
             api_url: args.api_url,
             socket_url: args.socket_url,
@@ -37,7 +37,18 @@ fn main() -> Result<()> {
         })
         .await?;
 
-        bot.run().await?;
-        Ok(())
-    })
+        bot.run().await
+    });
+
+    match result {
+        Ok(_) => Ok(()),
+        Err(err) => {
+            if err.is::<UnauthorizedError>() {
+                eprintln!("Error: {}", err);
+                quit::with_code(75);
+            } else {
+                Err(err)
+            }
+        }
+    }
 }

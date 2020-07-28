@@ -6,7 +6,7 @@ mod api {
     pub mod uwave;
 }
 
-use crate::api::uwave::{HttpApi, UnauthorizedError};
+use crate::api::uwave::HttpApi;
 use crate::handler::Handler;
 use async_std::sync::{Arc, Mutex};
 use async_tungstenite::async_std::{connect_async, ConnectStream};
@@ -16,6 +16,9 @@ use futures::prelude::*;
 use hreq::prelude::*;
 use hreq::Agent;
 use sled::Db;
+
+// Expose so the CLI can use a special exit code
+pub use crate::api::uwave::UnauthorizedError;
 
 #[derive(Debug, Clone)]
 pub struct ConnectionOptions {

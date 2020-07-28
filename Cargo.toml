@@ -20,12 +20,13 @@ html-index = { version = "0.3.3", default-features = false }
 log = "0.4.8"
 nanofd = { path = "../../goto-bus-stop/nanofd" }
 nom = "5.1.2"
+quit = "1.1.0"
 serde = { version = "1.0.114", features = ["derive"] }
 serde_json = "1.0.56"
+sha1 = "0.6.0"
 sled = "0.33.0"
 tachyons = "0.1.1"
 thiserror = "1.0.20"
-sha1 = "0.6.0"
 
 [profile.release]
 lto = true
