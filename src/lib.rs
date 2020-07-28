@@ -12,6 +12,8 @@ use async_tungstenite::async_std::{connect_async, ConnectStream};
 use async_tungstenite::tungstenite::Message;
 use async_tungstenite::WebSocketStream;
 use futures::prelude::*;
+use hreq::prelude::*;
+use hreq::Agent;
 use sled::Db;
 
 #[derive(Debug, Clone)]
@@ -32,14 +34,21 @@ pub struct SekshiBot {
 impl SekshiBot {
     pub async fn connect(options: ConnectionOptions) -> anyhow::Result<Self> {
         let url = |endpoint: &str| format!("{}/{}", options.api_url, endpoint);
+        let mut agent = Agent::new();
 
         log::info!("signing in...");
-        let login = ureq::post(&url("auth/login"))
-            .send_json(serde_json::json!({
+        let login = {
+            let req = Request::post(&url("auth/login")).with_json(&serde_json::json!({
                 "email": options.email,
                 "password": options.password,
-            }))
-            .into_json()?;
+            }))?;
+
+            let response = agent.send(req).await?;
+            response
+                .into_body()
+                .read_to_json::<serde_json::Value>()
+                .await?
+        };
 
         let jwt = if let Some(jwt) = login["meta"]["jwt"].as_str() {
             jwt.to_string()
@@ -48,14 +57,17 @@ impl SekshiBot {
         };
 
         log::info!("loading state...");
-        let now = ureq::get(&url("now"))
-            .set("Authorization", &format!("JWT {}", jwt))
-            .call();
-        if !now.ok() {
-            anyhow::bail!("could not fetch /now");
-        }
+        let now = {
+            let req = Request::get(&url("now"))
+                .header("Authorization", &format!("JWT {}", jwt))
+                .with_body(())?;
+            let response = agent.send(req).await?;
+            response
+                .into_body()
+                .read_to_json::<serde_json::Value>()
+                .await?
+        };
 
-        let now = now.into_json()?;
         let socket_token = match &now["socketToken"] {
             serde_json::Value::Null => None,
             serde_json::Value::String(token) => Some(token),
