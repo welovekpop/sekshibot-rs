@@ -811,14 +811,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "nanofd"
-version = "0.1.0"
-dependencies = [
- "rand",
- "v_escape",
-]
-
-[[package]]
 name = "nom"
 version = "4.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1167,7 +1159,6 @@ dependencies = [
  "hreq",
  "html-index",
  "log",
- "nanofd",
  "nom 5.1.2",
  "quit",
  "serde",
@@ -1177,6 +1168,7 @@ dependencies = [
  "sled",
  "tachyons",
  "thiserror",
+ "yolofd",
 ]
 
 [[package]]
@@ -1731,3 +1723,12 @@ name = "winapi-x86_64-pc-windows-gnu"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "712e227841d057c1ee1cd2fb22fa7e5a5461ae8e48fa2ca79ec42cfc1931183f"
+
+[[package]]
+name = "yolofd"
+version = "0.1.0"
+source = "git+https://github.com/goto-bus-stop/yolofd.git?branch=default#89f261319399a44b161add7cc0dbb10fc7739876"
+dependencies = [
+ "rand",
+ "v_escape",
+]
