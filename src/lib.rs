@@ -8,7 +8,7 @@ mod skiplist;
 mod uwave;
 
 use crate::handler::Handler;
-use crate::uwave::HttpApi;
+use crate::uwave::{HttpApi, UnauthorizedError};
 use async_tungstenite::async_std::{connect_async, ConnectStream};
 use async_tungstenite::tungstenite::Message;
 use async_tungstenite::WebSocketStream;
@@ -172,6 +172,8 @@ impl SekshiBot {
         };
 
         let handle_messages = async move {
+            let mut retval = Ok(());
+
             while let Some(message) = received_message_receiver.next().await {
                 log::info!("handling message {:?}", message);
                 let api = handler::Api::new(api_sender.clone(), http_api.clone());
@@ -179,16 +181,26 @@ impl SekshiBot {
                     match handler.handle(api.clone(), &message).await {
                         Ok(..) => (),
                         Err(err) => {
+                            // Exit if we are no longer authenticated so the bot can be restarted
+                            if err.is::<UnauthorizedError>() {
+                                api.exit().await;
+                                retval = Err(err);
+                                break;
+                            }
+
                             api.send_message(format_args!("Could not handle message: {}", err))
                                 .await;
                         }
                     }
                 }
             }
+
+            retval
         };
 
-        let (socket_stream, _) = futures::join!(socket_stream, handle_messages,);
+        let (socket_stream, handler_result) = futures::join!(socket_stream, handle_messages);
         let _ = socket_stream?;
+        let _ = handler_result?;
 
         Ok(())
     }

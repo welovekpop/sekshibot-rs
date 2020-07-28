@@ -1,8 +1,15 @@
 use anyhow::Result;
 use chrono::{DateTime, Utc};
+use hreq::http::StatusCode;
 use hreq::prelude::*;
+use hreq::Body;
 use serde::Deserialize;
 use serde_json::json;
+use thiserror::Error;
+
+#[derive(Debug, Error)]
+#[error("JWT missing or expired")]
+pub struct UnauthorizedError;
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct BaseMedia {
@@ -108,6 +115,15 @@ impl<'s> HttpApi<'s> {
         format!("{}/{}", self.api_url, endpoint)
     }
 
+    fn check(&self, response: Response<Body>) -> Result<Response<Body>> {
+        match dbg!(response.status()) {
+            StatusCode::OK => Ok(response),
+            StatusCode::UNAUTHORIZED | StatusCode::FORBIDDEN => Err(UnauthorizedError.into()),
+            // Let's just fail later I guess
+            _ => Ok(response),
+        }
+    }
+
     pub async fn history(&self, opts: HistoryOptions) -> Result<Vec<HistoryEntry<BaseMedia>>> {
         let mut req = Request::get(&self.url("booth/history"));
         if let Some(id) = opts.media {
@@ -119,17 +135,16 @@ impl<'s> HttpApi<'s> {
             media: Vec<BaseMedia>,
         }
 
-        type ResponseShape = ResponseData<Vec<HistoryEntry<String>>, PageMeta, IncludeHistory>;
+        type HistoryResponseShape =
+            ResponseData<Vec<HistoryEntry<String>>, PageMeta, IncludeHistory>;
 
-        let response = req
-            .call()
-            .await?
+        let response = self.check(req.call().await?)?;
+        let ResponseData { data, included, .. } = response
             .into_body()
-            .read_to_json::<ResponseShape>()
+            .read_to_json::<HistoryResponseShape>()
             .await?;
 
-        let ResponseData { data, included, .. } = response;
-
+        // Fill in the `media.media` properties with the actual media
         let entries = data
             .into_iter()
             .map(|entry| HistoryEntry {
@@ -167,9 +182,7 @@ impl<'s> HttpApi<'s> {
             }))
             .await?;
 
-        let json: serde_json::Value = response.into_body().read_to_json().await?;
-
-        dbg!(json);
+        let _: serde_json::Value = self.check(response)?.into_body().read_to_json().await?;
 
         Ok(())
     }
