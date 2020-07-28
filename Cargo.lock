@@ -539,8 +539,9 @@ dependencies = [
 
 [[package]]
 name = "html-index"
-version = "0.3.2"
-source = "git+https://github.com/http-rs/html-index.git?branch=opt-http-types#2eb439f757108220b4a3b63d5ae97c60028284cb"
+version = "0.3.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "be9baf165541dce7968c8dd7736797cf0ec35518df9e6beb6107c21003f27889"
 dependencies = [
  "css-rel-preload",
 ]
