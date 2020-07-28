@@ -85,6 +85,32 @@ impl SkipList {
         }
     }
 
+    async fn process_skip(&mut self, api: Api<'_>, args: &[String], do_skip: bool) -> Result<()> {
+        match args {
+            [media, reason] => {
+                self.add_skip_entry(media.parse()?, reason)?;
+            }
+            [reason] => {
+                if let Some(media) = self.current_media.clone() {
+                    self.add_skip_entry(media, reason)?;
+                } else {
+                    api.send_message("usage: !skiplist <media> <reason>").await;
+                    return Ok(());
+                }
+            }
+            _ => {
+                api.send_message("usage: !skiplist [media] <reason>").await;
+                return Ok(());
+            }
+        }
+
+        if do_skip {
+            api.http.skip(SkipOptions::default()).await?;
+        }
+
+        Ok(())
+    }
+
     async fn handle_chat_message(&mut self, api: Api<'_>, message: &ChatMessage) -> Result<()> {
         let ChatCommand { command, arguments } = match message.command() {
             Some(c) => c,
@@ -93,18 +119,17 @@ impl SkipList {
 
         match command.as_str() {
             "skiplist" | "blacklist" => {
-                match arguments.as_slice() {
-                    [media, reason] => {
-                        self.add_skip_entry(media.parse()?, reason)?;
+                match arguments.get(1).cloned().as_deref() {
+                    Some("add") => {
+                        self.process_skip(api, &arguments[2..], false).await?;
                     }
-                    [reason] => {
-                        if let Some(media) = self.current_media.clone() {
-                            self.add_skip_entry(media, reason)?;
-                        } else {
-                            api.send_message("usage: !skiplist <media> <reason>").await;
-                        }
+                    Some("skip") => {
+                        self.process_skip(api, &arguments[2..], true).await?;
                     }
-                    _ => {
+                    Some(_) => {
+                        self.process_skip(api, &arguments[1..], false).await?;
+                    }
+                    None => {
                         api.send_message("usage: !skiplist [media] <reason>").await;
                     }
                 }
