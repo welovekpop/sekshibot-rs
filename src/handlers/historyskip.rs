@@ -2,6 +2,7 @@ use crate::api::uwave::{HistoryOptions, SkipOptions};
 use crate::handler::{Api, Handler, MessageType};
 use anyhow::Result;
 use chrono::{Duration, Utc};
+use chrono_humanize::{Accuracy, HumanTime, Tense};
 
 #[derive(Debug)]
 pub struct HistorySkip;
@@ -36,10 +37,13 @@ impl Handler for HistorySkip {
         let time = recent_entry.played_at;
         let ago = Utc::now() - time;
         if ago < Duration::hours(1) {
-            log::info!("skipping because this song was played {} ago", ago);
+            let human_time = HumanTime::from(ago).to_text_en(Accuracy::Rough, Tense::Past);
+            log::info!("skipping because this song was played {}", human_time);
+
+            api.send_message(format!("This song was played {}.", human_time)).await;
             api.http
                 .skip(SkipOptions {
-                    reason: Some("history".to_string()), // format!("This song was played {} ago", ago))
+                    reason: Some("history".to_string()),
                     user_id: message.user_id.clone(),
                     remove: false,
                 })
