@@ -28,5 +28,14 @@ And command-line parameters:
 The bot will exit with code 75 if its login expired, or exit with another nonzero exit code if it crashes for other reasons.
 You can autorestart it with systemd or a similar system. If someone does `!exit` in chat, the bot exits with code 0, and it should probably not restart automatically.
 
+## Commands
+
+| Name | Description |
+|-|-|
+| `!e [emote]` | Display a reaction gif. |
+| `!addemote [emote] [url]` | Add a new reaction gif. |
+| `!emotes` | Send a link to a page with all the reaction gifs. |
+| `!skiplist add [media] "[reason]" | Add a song to the autoskip list. `[media]` is formatted as sourcetype:id, eg. `youtube:123456abc` |
+
 ## License
 [GPL-3.0](./LICENSE.md)
