@@ -160,6 +160,7 @@ impl SekshiBot {
                             }).to_string())).await?;
                         }
                         Some(handler::ApiMessage::Exit) | None => {
+                            socket.send(Message::Text(serde_json::json!({ "command": "logout" }).to_string())).await?;
                             socket.close().await?;
                             break
                         }
