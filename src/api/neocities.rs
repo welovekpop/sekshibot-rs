@@ -68,14 +68,9 @@ pub async fn publish(page_name: &str, content: &str) -> Result<String, PublishEr
     form_data.append_file(page_name, "text/html", &mut content.as_bytes())?;
     let data = form_data.end()?;
 
+    let auth = base64::encode(format!("{}:{}", username, password));
     let request = hreq::http::Request::post("https://neocities.org/api/upload")
-        .header(
-            "authorization",
-            format!(
-                "Basic {}",
-                base64::encode(format!("{}:{}", username, password))
-            ),
-        )
+        .header("authorization", format!("Basic {}", auth))
         .header("content-type", &content_type)
         .with_body(&data.into_inner())?;
 

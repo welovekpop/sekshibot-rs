@@ -1,5 +1,5 @@
-use crate::handler::{Api, ChatCommand, Handler, MessageType};
 use crate::api::neocities;
+use crate::handler::{Api, ChatCommand, Handler, MessageType};
 use crate::SekshiBot;
 use std::fmt::Write as _;
 

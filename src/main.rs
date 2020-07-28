@@ -1,6 +1,6 @@
+use anyhow::{bail, Result};
 use gumdrop::{Options, ParsingStyle};
 use sekshibot::{ConnectionOptions, SekshiBot};
-use anyhow::{bail, Result};
 
 ///
 #[derive(Debug, Clone, Options)]

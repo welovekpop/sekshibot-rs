@@ -1,10 +1,12 @@
 use anyhow::Result;
+use async_std::sync::{Arc, Mutex};
 use chrono::{DateTime, Utc};
 use hreq::http::StatusCode;
 use hreq::prelude::*;
-use hreq::Body;
+use hreq::{Agent, Body};
 use serde::Deserialize;
 use serde_json::json;
+use std::fmt::{self, Debug, Formatter};
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -100,15 +102,20 @@ pub struct HistoryEntry<TMedia> {
     pub played_at: DateTime<Utc>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct HttpApi<'s> {
+    agent: Arc<Mutex<Agent>>,
     api_url: &'s str,
     auth: &'s str,
 }
 
 impl<'s> HttpApi<'s> {
-    pub fn new(api_url: &'s str, auth: &'s str) -> Self {
-        Self { api_url, auth }
+    pub fn new(agent: Arc<Mutex<Agent>>, api_url: &'s str, auth: &'s str) -> Self {
+        Self {
+            agent,
+            api_url,
+            auth,
+        }
     }
 
     fn url(&self, endpoint: &str) -> String {
@@ -116,12 +123,18 @@ impl<'s> HttpApi<'s> {
     }
 
     fn check(&self, response: Response<Body>) -> Result<Response<Body>> {
-        match dbg!(response.status()) {
+        match response.status() {
             StatusCode::OK => Ok(response),
             StatusCode::UNAUTHORIZED | StatusCode::FORBIDDEN => Err(UnauthorizedError.into()),
             // Let's just fail later I guess
             _ => Ok(response),
         }
+    }
+
+    async fn send(&self, request: Request<Body>) -> Result<Response<Body>> {
+        let mut agent = self.agent.lock().await;
+        let response = agent.send(request).await?;
+        self.check(response)
     }
 
     pub async fn history(&self, opts: HistoryOptions) -> Result<Vec<HistoryEntry<BaseMedia>>> {
@@ -138,7 +151,7 @@ impl<'s> HttpApi<'s> {
         type HistoryResponseShape =
             ResponseData<Vec<HistoryEntry<String>>, PageMeta, IncludeHistory>;
 
-        let response = self.check(req.call().await?)?;
+        let response = self.send(req.with_body(())?).await?;
         let ResponseData { data, included, .. } = response
             .into_body()
             .read_to_json::<HistoryResponseShape>()
@@ -173,17 +186,28 @@ impl<'s> HttpApi<'s> {
     }
 
     pub async fn skip(&self, opts: SkipOptions) -> Result<()> {
-        let response = Request::post(&self.url("booth/skip"))
+        let request = Request::post(&self.url("booth/skip"))
             .header("Authorization", self.auth)
-            .send_json(&json!({
+            .with_json(&json!({
                 "reason": opts.reason.unwrap_or_default(),
                 "userID": opts.user_id,
                 "remove": opts.remove,
-            }))
-            .await?;
+            }))?;
 
-        let _: serde_json::Value = self.check(response)?.into_body().read_to_json().await?;
+        let response = self.send(request).await?;
+
+        let _: serde_json::Value = response.into_body().read_to_json().await?;
 
         Ok(())
+    }
+}
+
+impl<'s> Debug for HttpApi<'s> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        f.debug_struct("HttpApi")
+            .field("agent", &())
+            .field("api_url", &self.api_url)
+            .field("auth", &self.auth)
+            .finish()
     }
 }

@@ -6,8 +6,9 @@ mod api {
     pub mod uwave;
 }
 
-use crate::handler::Handler;
 use crate::api::uwave::{HttpApi, UnauthorizedError};
+use crate::handler::Handler;
+use async_std::sync::{Arc, Mutex};
 use async_tungstenite::async_std::{connect_async, ConnectStream};
 use async_tungstenite::tungstenite::Message;
 use async_tungstenite::WebSocketStream;
@@ -29,6 +30,7 @@ pub struct SekshiBot {
     socket: WebSocketStream<ConnectStream>,
     api_url: String,
     api_auth: String,
+    agent: Arc<Mutex<Agent>>,
     handlers: Vec<Box<dyn Handler + Send>>,
 }
 
@@ -92,6 +94,7 @@ impl SekshiBot {
             socket,
             api_url: options.api_url,
             api_auth,
+            agent: Arc::new(Mutex::new(agent)),
             handlers: vec![],
         };
 
@@ -118,7 +121,7 @@ impl SekshiBot {
 
         let mut socket = self.socket.fuse();
         let mut handlers = self.handlers;
-        let http_api = HttpApi::new(&self.api_url, &self.api_auth);
+        let http_api = HttpApi::new(self.agent, &self.api_url, &self.api_auth);
 
         let socket_stream = async move {
             loop {
