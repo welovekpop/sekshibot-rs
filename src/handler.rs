@@ -1,4 +1,4 @@
-use crate::uwave::{BaseMedia, HttpApi, MediaWithOverrides};
+use crate::api::uwave::{BaseMedia, HttpApi, MediaWithOverrides};
 use anyhow::{bail, Error, Result};
 use async_channel::Sender;
 use serde::Deserialize;

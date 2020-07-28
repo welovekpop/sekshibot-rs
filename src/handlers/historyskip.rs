@@ -1,5 +1,5 @@
 use crate::handler::{Api, Handler, MessageType};
-use crate::uwave::{HistoryOptions, SkipOptions};
+use crate::api::uwave::{HistoryOptions, SkipOptions};
 use anyhow::Result;
 use chrono::{Duration, Utc};
 

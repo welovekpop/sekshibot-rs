@@ -1,5 +1,5 @@
 use crate::handler::{AdvanceMessage, Api, ChatCommand, ChatMessage, Handler, MessageType};
-use crate::uwave::SkipOptions;
+use crate::api::uwave::SkipOptions;
 use crate::SekshiBot;
 use anyhow::Result;
 use serde::{Deserialize, Serialize};

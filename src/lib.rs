@@ -1,14 +1,13 @@
 #![recursion_limit = "256"]
-mod emotes;
-mod exit;
 mod handler;
-mod historyskip;
-mod neocities;
-mod skiplist;
-mod uwave;
+mod handlers;
+mod api {
+    pub mod neocities;
+    pub mod uwave;
+}
 
 use crate::handler::Handler;
-use crate::uwave::{HttpApi, UnauthorizedError};
+use crate::api::uwave::{HttpApi, UnauthorizedError};
 use async_tungstenite::async_std::{connect_async, ConnectStream};
 use async_tungstenite::tungstenite::Message;
 use async_tungstenite::WebSocketStream;
@@ -96,12 +95,12 @@ impl SekshiBot {
             handlers: vec![],
         };
 
-        let emotes = emotes::Emotes::new(&mut bot)?;
+        let emotes = handlers::Emotes::new(&mut bot)?;
         bot.add_handler(emotes);
-        bot.add_handler(exit::Exit);
-        let skiplist = skiplist::SkipList::new(&mut bot, &now)?;
+        bot.add_handler(handlers::Exit);
+        let skiplist = handlers::SkipList::new(&mut bot, &now)?;
         bot.add_handler(skiplist);
-        bot.add_handler(historyskip::HistorySkip);
+        bot.add_handler(handlers::HistorySkip);
 
         Ok(bot)
     }
