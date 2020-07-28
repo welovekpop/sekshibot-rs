@@ -47,6 +47,18 @@ impl Emotes {
                 </tr></thead>
                 <tbody>{}</tbody>
               </table>
+              <script defer>
+                if (document.body.classList) onclick = function onclick (event) {{
+                  if (!event.target.classList.contains('name')) {{
+                    return
+                  }}
+                  var s = window.getSelection()
+                  var r = document.createRange()
+                  r.selectNodeContents(event.target)
+                  s.removeAllRanges()
+                  s.addRange(r)
+                }}
+              </script>
             </body>
         "#,
             trs
@@ -54,23 +66,7 @@ impl Emotes {
 
         let html = html_index::new()
             .raw_body(&body)
-            .inline_style(tachyons::TACHYONS)
-            .inline_script(
-                r#"
-                onload = function () {
-                  if (document.body.classList) onclick = function onclick (event) {
-                    if (!event.target.classList.contains('name')) {
-                      return
-                    }
-                    var s = window.getSelection()
-                    var r = document.createRange()
-                    r.selectNodeContents(event.target)
-                    s.removeAllRanges()
-                    s.addRange(r)
-                  }
-                }
-           "#,
-            );
+            .inline_style(tachyons::TACHYONS);
 
         Ok(html.build())
     }
