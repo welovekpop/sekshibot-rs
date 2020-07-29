@@ -40,7 +40,8 @@ impl Handler for HistorySkip {
             let human_time = HumanTime::from(ago).to_text_en(Accuracy::Rough, Tense::Past);
             log::info!("skipping because this song was played {}", human_time);
 
-            api.send_message(format!("This song was played {}.", human_time)).await;
+            api.send_message(format!("This song was played {}.", human_time))
+                .await;
             api.http
                 .skip(SkipOptions {
                     reason: Some("history".to_string()),

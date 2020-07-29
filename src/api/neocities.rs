@@ -1,10 +1,10 @@
 use hreq::prelude::*;
 use hreq::Agent;
-use yolofd::FormData;
 use serde::Deserialize;
 use sha1::Sha1;
 use std::io::Cursor;
 use thiserror::Error;
+use yolofd::FormData;
 
 #[derive(Debug, Error)]
 pub enum PublishError {
