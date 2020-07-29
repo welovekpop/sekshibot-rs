@@ -138,7 +138,7 @@ impl SekshiBot {
         };
         #[cfg(not(unix))]
         let mut signal_receiver = {
-            use async_std::io::Read;
+            use async_std::io::{Read, Result};
             use std::pin::Pin;
             use std::task::{Context, Poll};
 
