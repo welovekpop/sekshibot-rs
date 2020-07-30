@@ -37,5 +37,11 @@ You can autorestart it with systemd or a similar system. If someone does `!exit`
 | `!emotes` | Send a link to a page with all the reaction gifs. |
 | `!skiplist add [media] "[reason]"` | Add a song to the autoskip list. `[media]` is formatted as sourcetype:id, eg. `youtube:123456abc` |
 
+## Todo
+
+- [ ] Port karma
+- [ ] History skip exemptions
+- [ ] Take start/end timings into account for history skips
+
 ## License
 [GPL-3.0](./LICENSE.md)
