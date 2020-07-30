@@ -1228,7 +1228,9 @@ checksum = "2579985fda508104f7587689507983eadd6a6e84dd35d6d115361f530916fa0d"
 
 [[package]]
 name = "shorten-url"
-version = "0.1.0"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "605cba02d2870135952a636ffb7260d70c81c15a94d4abbdb470ca942d0717d2"
 
 [[package]]
 name = "signal-hook"
