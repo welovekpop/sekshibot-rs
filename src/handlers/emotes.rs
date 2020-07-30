@@ -2,6 +2,7 @@ use crate::api::neocities;
 use crate::handler::{Api, ChatCommand, Handler, MessageType};
 use crate::SekshiBot;
 use std::fmt::Write as _;
+use shorten_url::shorten;
 
 #[derive(Debug)]
 pub struct Emotes {
@@ -18,6 +19,8 @@ impl Emotes {
         let mut trs = String::new();
         for pair in self.tree.iter() {
             let (name, url) = pair?;
+            let name = std::str::from_utf8(&name)?;
+            let url = std::str::from_utf8(&url)?;
 
             write!(
                 &mut trs,
@@ -31,9 +34,9 @@ impl Emotes {
                   </td>
                 </tr>
                 "#,
-                id = std::str::from_utf8(&name)?,
-                url = std::str::from_utf8(&url)?,
-                truncatedUrl = std::str::from_utf8(&url)?
+                id = name,
+                url = url,
+                truncatedUrl = shorten(url, 50)
             )?;
         }
 
