@@ -8,7 +8,7 @@ mod api {
 
 use crate::api::uwave::HttpApi;
 use crate::handler::Handler;
-use async_std::sync::{Arc, Mutex};
+use async_mutex::Mutex;
 use async_tungstenite::async_std::{connect_async, ConnectStream};
 use async_tungstenite::tungstenite::Message;
 use async_tungstenite::WebSocketStream;
@@ -16,6 +16,7 @@ use futures::prelude::*;
 use hreq::prelude::*;
 use hreq::Agent;
 use sled::Db;
+use std::sync::Arc;
 
 // Expose so the CLI can use a special exit code
 pub use crate::api::uwave::UnauthorizedError;

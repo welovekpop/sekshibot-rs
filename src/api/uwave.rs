@@ -1,5 +1,5 @@
 use anyhow::Result;
-use async_std::sync::{Arc, Mutex};
+use async_mutex::Mutex;
 use chrono::{DateTime, Utc};
 use hreq::http::StatusCode;
 use hreq::prelude::*;
@@ -7,6 +7,7 @@ use hreq::{Agent, Body};
 use serde::Deserialize;
 use serde_json::json;
 use std::fmt::{self, Debug, Formatter};
+use std::sync::Arc;
 use thiserror::Error;
 
 #[derive(Debug, Error)]

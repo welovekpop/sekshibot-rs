@@ -43,6 +43,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "async-mutex"
+version = "1.1.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "20e85981fc34e84cdff3fc2c9219189752633fdc538a06df8b5ac45b68a4f3a9"
+dependencies = [
+ "event-listener",
+]
+
+[[package]]
 name = "async-std"
 version = "1.6.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1143,6 +1152,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "async-channel",
+ "async-mutex",
  "async-std",
  "async-trait",
  "async-tungstenite",

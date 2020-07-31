@@ -1,8 +1,8 @@
 use crate::api::neocities;
 use crate::handler::{Api, ChatCommand, Handler, MessageType};
 use crate::SekshiBot;
-use std::fmt::Write as _;
 use shorten_url::shorten;
+use std::fmt::Write as _;
 
 #[derive(Debug)]
 pub struct Emotes {
