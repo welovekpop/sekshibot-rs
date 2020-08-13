@@ -124,9 +124,9 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d7e7fbc0843fc5ad3d5ca889c5b2bea9130984d34cd0e62db57ab70c2529a8e3"
 dependencies = [
  "futures",
- "rustls 0.18.0",
+ "rustls",
  "webpki",
- "webpki-roots 0.20.0",
+ "webpki-roots",
 ]
 
 [[package]]
@@ -172,12 +172,6 @@ name = "base-x"
 version = "0.2.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1b20b618342cf9891c292c4f5ac2cde7287cc5c87e87e9c769d617793607dec1"
-
-[[package]]
-name = "base64"
-version = "0.11.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b41b7ea54a0c9d92199de89e20e58d49f02f8e699814ef3fdf266f6f748d15c7"
 
 [[package]]
 name = "base64"
@@ -624,9 +618,9 @@ dependencies = [
 
 [[package]]
 name = "hreq"
-version = "0.3.0"
+version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "875d34eab5e171c25450bcdc30575bcd0a396c529cfed8f7972b39390c0dd77b"
+checksum = "32f87f2d2e50b147f5e2d4384fdc1943abf72954b3c18d1ffc54cd6c6cfeaecc"
 dependencies = [
  "async-compression",
  "async-std",
@@ -637,19 +631,36 @@ dependencies = [
  "flate2",
  "futures-io",
  "futures-util",
+ "hreq-h1",
  "hreq-h2",
  "http",
  "httparse",
- "log",
+ "httpdate",
  "once_cell",
  "publicsuffix",
  "qstring",
- "rustls 0.17.0",
+ "rustls",
  "serde",
  "serde_json",
  "time 0.2.16",
+ "tracing",
+ "tracing-futures",
  "webpki",
- "webpki-roots 0.19.0",
+ "webpki-roots",
+]
+
+[[package]]
+name = "hreq-h1"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b713c2e7016ac8d7fff4ddd910697cccfda9c0bb2ed455854682fea5158d96db"
+dependencies = [
+ "futures-channel",
+ "futures-io",
+ "futures-util",
+ "http",
+ "httparse",
+ "tracing",
 ]
 
 [[package]]
@@ -696,6 +707,12 @@ name = "httparse"
 version = "1.3.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cd179ae861f0c2e53da70d892f5f3029f9594be0c41dc5269cd371691b1dc2f9"
+
+[[package]]
+name = "httpdate"
+version = "0.3.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "494b4d60369511e7dea41cf646832512a94e542f68bb9c49e54518e0f468eb47"
 
 [[package]]
 name = "idna"
@@ -1144,23 +1161,11 @@ dependencies = [
 
 [[package]]
 name = "rustls"
-version = "0.17.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c0d4a31f5d68413404705d6982529b0e11a9aacd4839d1d6222ee3b8cb4015e1"
-dependencies = [
- "base64 0.11.0",
- "ring",
- "sct",
- "webpki",
-]
-
-[[package]]
-name = "rustls"
 version = "0.18.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cac94b333ee2aac3284c5b8a1b7fb4dd11cba88c244e3fe33cdbd047af0eb693"
 dependencies = [
- "base64 0.12.3",
+ "base64",
  "log",
  "ring",
  "sct",
@@ -1205,7 +1210,7 @@ dependencies = [
  "async-std",
  "async-trait",
  "async-tungstenite",
- "base64 0.12.3",
+ "base64",
  "chrono",
  "chrono-humanize",
  "femme",
@@ -1521,7 +1526,19 @@ checksum = "6d79ca061b032d6ce30c660fded31189ca0b9922bf483cd70759f13a2d86786c"
 dependencies = [
  "cfg-if",
  "log",
+ "tracing-attributes",
  "tracing-core",
+]
+
+[[package]]
+name = "tracing-attributes"
+version = "0.1.10"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1fe233f4227389ab7df5b32649239da7ebe0b281824b4e84b342d04d3fd8c25e"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
 ]
 
 [[package]]
@@ -1534,12 +1551,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "tracing-futures"
+version = "0.2.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ab7bb6f14721aa00656086e9335d363c5c8747bae02ebe32ea2c7dece5689b4c"
+dependencies = [
+ "pin-project",
+ "tracing",
+]
+
+[[package]]
 name = "tungstenite"
 version = "0.11.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f0308d80d86700c5878b9ef6321f020f29b1bb9d5ff3cab25e75e23f3a492a23"
 dependencies = [
- "base64 0.12.3",
+ "base64",
  "byteorder",
  "bytes",
  "http",
@@ -1743,15 +1770,6 @@ checksum = "ab146130f5f790d45f82aeeb09e55a256573373ec64409fc19a6fb82fb1032ae"
 dependencies = [
  "ring",
  "untrusted",
-]
-
-[[package]]
-name = "webpki-roots"
-version = "0.19.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f8eff4b7516a57307f9349c64bf34caa34b940b66fed4b2fb3136cb7386e5739"
-dependencies = [
- "webpki",
 ]
 
 [[package]]
