@@ -11,13 +11,13 @@ async-mutex = "1.1.5"
 async-std = { version = "1.6.2" }
 async-trait = "0.1.36"
 async-tungstenite = { version = "0.8.0", features = ["async-std-runtime", "async-tls"] }
-base64 = "0.12.3"
+base64 = "0.13.0"
 chrono = { version = "0.4.13", features = ["serde"] }
-chrono-humanize = "0.0.11"
+chrono-humanize = "0.1.1"
 femme = "2.1.0"
 futures = "0.3.5"
 gumdrop = "0.8.0"
-hreq = { version = "0.4.0", features = ["async-std", "gzip", "tls"], default-features = false }
+hreq = { version = "0.7.0", features = ["async-std", "gzip", "tls"], default-features = false }
 html-index = { version = "0.3.3", default-features = false }
 log = "0.4.8"
 nom = { version = "5.1.2", features = ["std"], default-features = false }
