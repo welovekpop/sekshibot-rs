@@ -9,9 +9,10 @@ fn parse_message(input: &str) -> Result<(&str, Vec<&str>)> {
     use nom::bytes::complete::{escaped, is_not, take_while};
     use nom::character::complete::{alpha1, char, space0, space1};
     use nom::combinator::{all_consuming, opt};
-    use nom::multi::separated_list;
+    use nom::error::Error;
+    use nom::multi::separated_list1;
     use nom::sequence::{preceded, terminated, tuple};
-    use nom::IResult;
+    use nom::{Err, IResult};
 
     fn parser(input: &str) -> IResult<&str, (&str, Vec<&str>)> {
         let cmd_parser = preceded(char('!'), alpha1);
@@ -20,20 +21,20 @@ fn parse_message(input: &str) -> Result<(&str, Vec<&str>)> {
             preceded(char('"'), terminated(string_parser, char('"'))),
             take_while(|c: char| !c.is_ascii_whitespace()),
         ));
-        let args_parser = separated_list(space1, onearg_parser);
+        let args_parser = separated_list1(space1, onearg_parser);
         let (input, (cmd, args, _trailing)) =
             tuple((cmd_parser, opt(preceded(space1, args_parser)), space0))(input)?;
 
         Ok((input, (cmd, args.unwrap_or_default())))
     }
 
-    let full_parser = all_consuming(parser);
+    let mut full_parser = all_consuming(parser);
 
     let (_, result) = match full_parser(input) {
         Ok(result) => result,
-        Err(nom::Err::Incomplete(_)) => bail!("garbage data at end of message?"),
-        Err(nom::Err::Error((_, kind))) => bail!("parse error: {:?}", kind),
-        Err(nom::Err::Failure((_, kind))) => bail!("parse failure: {:?}", kind),
+        Err(Err::Incomplete(_)) => bail!("garbage data at end of message?"),
+        Err(Err::Error(Error { code, .. })) => bail!("parse error: {:?}", code),
+        Err(Err::Failure(Error { code, .. })) => bail!("parse failure: {:?}", code),
     };
 
     Ok(result)
