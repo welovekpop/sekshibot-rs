@@ -1,6 +1,6 @@
 use crate::api::uwave::SkipOptions;
 use crate::handler::{AdvanceMessage, Api, ChatCommand, ChatMessage, Handler, MessageType};
-use crate::SekshiBot;
+use crate::{IntoAnyhow, SekshiBot};
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::fmt::{self, Display, Formatter};
@@ -105,7 +105,10 @@ impl SkipList {
         }
 
         if do_skip {
-            api.http.skip(SkipOptions::default()).await?;
+            api.http
+                .skip(SkipOptions::default())
+                .await
+                .into_anyhow_error()?;
         }
 
         Ok(())
@@ -156,7 +159,8 @@ impl SkipList {
                     )),
                     remove: false,
                 })
-                .await?;
+                .await
+                .into_anyhow_error()?;
             Ok(())
         } else {
             Ok(())

@@ -1,5 +1,6 @@
 use crate::api::uwave::{HistoryOptions, SkipOptions};
 use crate::handler::{Api, Handler, MessageType};
+use crate::IntoAnyhow;
 use anyhow::Result;
 use chrono::{Duration, Utc};
 use chrono_humanize::{Accuracy, HumanTime, Tense};
@@ -21,7 +22,8 @@ impl Handler for HistorySkip {
                 media: Some(message.media.media.id.clone()),
                 ..Default::default()
             })
-            .await?;
+            .await
+            .into_anyhow_error()?;
 
         let recent_entry = results
             .into_iter()
@@ -48,7 +50,8 @@ impl Handler for HistorySkip {
                     user_id: message.user_id.clone(),
                     remove: false,
                 })
-                .await?;
+                .await
+                .into_anyhow_error()?;
         }
 
         Ok(())

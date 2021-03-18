@@ -1,13 +1,9 @@
-use anyhow::Result;
-use async_mutex::Mutex;
 use chrono::{DateTime, Utc};
-use hreq::http::StatusCode;
-use hreq::prelude::*;
-use hreq::{Agent, Body};
 use serde::Deserialize;
 use serde_json::json;
 use std::fmt::{self, Debug, Formatter};
-use std::sync::Arc;
+use surf::http::StatusCode;
+use surf::{Request, Response};
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -105,15 +101,15 @@ pub struct HistoryEntry<TMedia> {
 
 #[derive(Clone)]
 pub struct HttpApi<'s> {
-    agent: Arc<Mutex<Agent>>,
+    client: surf::Client,
     api_url: &'s str,
     auth: &'s str,
 }
 
 impl<'s> HttpApi<'s> {
-    pub fn new(agent: Arc<Mutex<Agent>>, api_url: &'s str, auth: &'s str) -> Self {
+    pub fn new(client: surf::Client, api_url: &'s str, auth: &'s str) -> Self {
         Self {
-            agent,
+            client,
             api_url,
             auth,
         }
@@ -123,25 +119,27 @@ impl<'s> HttpApi<'s> {
         format!("{}/{}", self.api_url, endpoint)
     }
 
-    fn check(&self, response: Response<Body>) -> Result<Response<Body>> {
+    fn check(&self, response: Response) -> surf::Result<Response> {
         match response.status() {
-            StatusCode::OK => Ok(response),
-            StatusCode::UNAUTHORIZED | StatusCode::FORBIDDEN => Err(UnauthorizedError.into()),
+            StatusCode::Ok => Ok(response),
+            StatusCode::Unauthorized | StatusCode::Forbidden => Err(UnauthorizedError.into()),
             // Let's just fail later I guess
             _ => Ok(response),
         }
     }
 
-    async fn send(&self, request: Request<Body>) -> Result<Response<Body>> {
-        let mut agent = self.agent.lock().await;
-        let response = agent.send(request).await?;
+    async fn send(&self, request: Request) -> surf::Result<Response> {
+        let response = self.client.send(request).await?;
         self.check(response)
     }
 
-    pub async fn history(&self, opts: HistoryOptions) -> Result<Vec<HistoryEntry<BaseMedia>>> {
-        let mut req = Request::get(&self.url("booth/history"));
+    pub async fn history(
+        &self,
+        opts: HistoryOptions,
+    ) -> surf::Result<Vec<HistoryEntry<BaseMedia>>> {
+        let mut req = surf::get(&self.url("booth/history"));
         if let Some(id) = opts.media {
-            req = req.query("filter[media]", &id);
+            req = req.query(&json!({ "filter[media]": id }))?;
         }
 
         #[derive(Debug, Deserialize)]
@@ -152,11 +150,9 @@ impl<'s> HttpApi<'s> {
         type HistoryResponseShape =
             ResponseData<Vec<HistoryEntry<String>>, PageMeta, IncludeHistory>;
 
-        let response = self.send(req.with_body(())?).await?;
-        let ResponseData { data, included, .. } = response
-            .into_body()
-            .read_to_json::<HistoryResponseShape>()
-            .await?;
+        let mut response = self.send(req.build()).await?;
+        let ResponseData { data, included, .. } =
+            response.body_json::<HistoryResponseShape>().await?;
 
         // Fill in the `media.media` properties with the actual media
         let entries = data
@@ -186,18 +182,18 @@ impl<'s> HttpApi<'s> {
         Ok(entries)
     }
 
-    pub async fn skip(&self, opts: SkipOptions) -> Result<()> {
-        let request = Request::post(&self.url("booth/skip"))
+    pub async fn skip(&self, opts: SkipOptions) -> surf::Result<()> {
+        let request = surf::post(&self.url("booth/skip"))
             .header("Authorization", self.auth)
-            .with_json(&json!({
+            .body(json!({
                 "reason": opts.reason.unwrap_or_default(),
                 "userID": opts.user_id,
                 "remove": opts.remove,
-            }))?;
+            }));
 
-        let response = self.send(request).await?;
+        let mut response = self.send(request.build()).await?;
 
-        let _: serde_json::Value = response.into_body().read_to_json().await?;
+        let _: serde_json::Value = response.body_json().await?;
 
         Ok(())
     }

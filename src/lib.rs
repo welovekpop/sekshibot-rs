@@ -8,7 +8,6 @@ mod api {
 
 use crate::api::uwave::HttpApi;
 use crate::handler::Handler;
-use async_mutex::Mutex;
 use async_tungstenite::async_std::{connect_async, ConnectStream};
 use async_tungstenite::tungstenite::Message;
 use async_tungstenite::WebSocketStream;
@@ -16,10 +15,19 @@ use futures::prelude::*;
 use hreq::prelude::*;
 use hreq::Agent;
 use sled::Db;
-use std::sync::Arc;
 
 // Expose so the CLI can use a special exit code
 pub use crate::api::uwave::UnauthorizedError;
+
+pub trait IntoAnyhow<T> {
+    fn into_anyhow_error(self) -> anyhow::Result<T>;
+}
+
+impl<T> IntoAnyhow<T> for surf::Result<T> {
+    fn into_anyhow_error(self) -> anyhow::Result<T> {
+        self.map_err(|error| anyhow::Error::msg(error))
+    }
+}
 
 #[derive(Debug, Clone)]
 pub struct ConnectionOptions {
@@ -34,7 +42,6 @@ pub struct SekshiBot {
     socket: WebSocketStream<ConnectStream>,
     api_url: String,
     api_auth: String,
-    agent: Arc<Mutex<Agent>>,
     handlers: Vec<Box<dyn Handler + Send>>,
 }
 
@@ -98,7 +105,6 @@ impl SekshiBot {
             socket,
             api_url: options.api_url,
             api_auth,
-            agent: Arc::new(Mutex::new(agent)),
             handlers: vec![],
         };
 
@@ -125,7 +131,7 @@ impl SekshiBot {
 
         let mut socket = self.socket.fuse();
         let mut handlers = self.handlers;
-        let http_api = HttpApi::new(self.agent, &self.api_url, &self.api_auth);
+        let http_api = HttpApi::new(surf::client(), &self.api_url, &self.api_auth);
 
         #[cfg(unix)]
         let mut signal_receiver = {
