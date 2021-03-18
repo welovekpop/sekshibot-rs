@@ -1660,7 +1660,6 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "async-channel",
- "async-mutex",
  "async-std",
  "async-trait",
  "async-tungstenite",
