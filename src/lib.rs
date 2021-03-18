@@ -12,8 +12,6 @@ use async_tungstenite::async_std::{connect_async, ConnectStream};
 use async_tungstenite::tungstenite::Message;
 use async_tungstenite::WebSocketStream;
 use futures::prelude::*;
-use hreq::prelude::*;
-use hreq::Agent;
 use sled::Db;
 
 // Expose so the CLI can use a special exit code
@@ -48,20 +46,22 @@ pub struct SekshiBot {
 impl SekshiBot {
     pub async fn connect(options: ConnectionOptions) -> anyhow::Result<Self> {
         let url = |endpoint: &str| format!("{}/{}", options.api_url, endpoint);
-        let mut agent = Agent::new();
+        let client = surf::client();
 
         log::info!("signing in...");
         let login = {
-            let req = Request::post(&url("auth/login")).with_json(&serde_json::json!({
-                "email": options.email,
-                "password": options.password,
-            }))?;
+            let req = surf::post(&url("auth/login"))
+                .body(serde_json::json!({
+                    "email": options.email,
+                    "password": options.password,
+                }))
+                .build();
 
-            let response = agent.send(req).await?;
+            let mut response = client.send(req).await.into_anyhow_error()?;
             response
-                .into_body()
-                .read_to_json::<serde_json::Value>()
-                .await?
+                .body_json::<serde_json::Value>()
+                .await
+                .into_anyhow_error()?
         };
 
         let jwt = if let Some(jwt) = login["meta"]["jwt"].as_str() {
@@ -73,14 +73,14 @@ impl SekshiBot {
 
         log::info!("loading state...");
         let now = {
-            let req = Request::get(&url("now"))
+            let req = surf::get(&url("now"))
                 .header("Authorization", &api_auth)
-                .with_body(())?;
-            let response = agent.send(req).await?;
+                .build();
+            let mut response = client.send(req).await.into_anyhow_error()?;
             response
-                .into_body()
-                .read_to_json::<serde_json::Value>()
-                .await?
+                .body_json::<serde_json::Value>()
+                .await
+                .into_anyhow_error()?
         };
 
         let socket_token = match &now["socketToken"] {
