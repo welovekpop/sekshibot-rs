@@ -55,6 +55,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "aho-corasick"
+version = "0.7.15"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7404febffaa47dac81aa44dba71523c9d069b1bdc50a77db41195149e17f68e5"
+dependencies = [
+ "memchr",
+]
+
+[[package]]
 name = "anyhow"
 version = "1.0.38"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -549,6 +558,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "esbuild-rs"
+version = "0.8.30"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cee639ea3520bc6b65d9e0e875b2ff801de5e392140a0954e24a71b03fc4fae9"
+dependencies = [
+ "lazy_static",
+ "libc",
+ "memorymodule-rs",
+]
+
+[[package]]
 name = "event-listener"
 version = "2.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -843,6 +863,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "html-escape"
+version = "0.2.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d64794b2265e97e459334ed47a7b7369ce8e8ee3d3450c0c363a0b563fc92233"
+dependencies = [
+ "utf8-width",
+]
+
+[[package]]
 name = "html-index"
 version = "0.3.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1062,6 +1091,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "memorymodule-rs"
+version = "0.0.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0c4ead5a227d30610a2dee54d4121a79184072f94865506420e535a778b8a681"
+dependencies = [
+ "cc",
+ "libc",
+]
+
+[[package]]
 name = "mime"
 version = "0.3.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1075,6 +1114,17 @@ checksum = "2684d4c2e97d99848d30b324b00c8fcc7e5c897b7cbb5819b09e7c90e8baf212"
 dependencies = [
  "mime",
  "unicase",
+]
+
+[[package]]
+name = "minify-html"
+version = "0.4.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "36da88423dea166b1506fb795e61294f47bbb09ceaa619a536a8d237bb2c296d"
+dependencies = [
+ "aho-corasick",
+ "lazy_static",
+ "memchr",
 ]
 
 [[package]]
@@ -1496,11 +1546,14 @@ dependencies = [
  "base64",
  "chrono",
  "chrono-humanize",
+ "esbuild-rs",
  "femme",
  "futures",
  "gumdrop",
+ "html-escape",
  "html-index",
  "log",
+ "minify-html",
  "nom 6.1.2",
  "quit",
  "serde",
@@ -2035,6 +2088,12 @@ name = "utf-8"
 version = "0.7.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "05e42f7c18b8f902290b009cde6d651262f956c98bc51bca4cd1d511c9cd85c7"
+
+[[package]]
+name = "utf8-width"
+version = "0.1.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9071ac216321a4470a69fb2b28cfc68dcd1a39acd877c8be8e014df6772d8efa"
 
 [[package]]
 name = "v_escape"

@@ -16,8 +16,10 @@ chrono-humanize = "0.1.1"
 femme = "2.1.0"
 futures = "0.3.5"
 gumdrop = "0.8.0"
+html-escape = "0.2.7"
 html-index = { version = "0.3.3", default-features = false }
 log = "0.4.8"
+minify-html = "0.4.3"
 nom = { version = "6.0.0", features = ["std"], default-features = false }
 quit = "1.1.0"
 serde = { version = "1.0.114", features = ["derive"] }
@@ -27,9 +29,12 @@ shorten-url = "1.0.0"
 signal-hook = "0.2.1"
 sled = "0.34.0"
 surf = "2.2.0"
-tachyons = "0.1.1"
 thiserror = "1.0.20"
 yolofd = { git = "https://github.com/goto-bus-stop/yolofd.git", branch = "default" }
+
+[build-dependencies]
+esbuild-rs = "0.8.30"
+tachyons = "0.1.1"
 
 [profile.release]
 lto = true

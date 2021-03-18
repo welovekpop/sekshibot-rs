@@ -4,6 +4,8 @@ use crate::SekshiBot;
 use shorten_url::shorten;
 use std::fmt::Write as _;
 
+const TACHYONS: &'static str = include_str!(concat!(env!("OUT_DIR"), "/tachyons.css"));
+
 #[derive(Debug)]
 pub struct Emotes {
     tree: sled::Tree,
@@ -34,13 +36,13 @@ impl Emotes {
                   </td>
                 </tr>
                 "#,
-                id = name,
-                url = url,
-                truncatedUrl = shorten(url, 50)
+                id = html_escape::encode_text(name),
+                url = html_escape::encode_double_quoted_attribute(url),
+                truncatedUrl = html_escape::encode_text(&shorten(url, 50))
             )?;
         }
 
-        let body = format!(
+        let mut body = format!(
             r#"
             <body class="bg-dark-gray near-white mh5 mv3">
               <table class="collapse" style="margin: auto">
@@ -67,9 +69,16 @@ impl Emotes {
             trs
         );
 
-        let html = html_index::new()
-            .raw_body(&body)
-            .inline_style(tachyons::TACHYONS);
+        let body = minify_html::in_place_str(
+            &mut body,
+            &minify_html::Cfg {
+                minify_js: false,
+                minify_css: false,
+            },
+        )
+        .unwrap();
+
+        let html = html_index::new().raw_body(body).inline_style(TACHYONS);
 
         Ok(html.build())
     }
