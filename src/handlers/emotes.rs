@@ -4,7 +4,7 @@ use crate::SekshiBot;
 use shorten_url::shorten;
 use std::fmt::Write as _;
 
-const TACHYONS: &'static str = include_str!(concat!(env!("OUT_DIR"), "/tachyons.css"));
+const TACHYONS: &str = include_str!(concat!(env!("OUT_DIR"), "/tachyons.css"));
 
 #[derive(Debug)]
 pub struct Emotes {

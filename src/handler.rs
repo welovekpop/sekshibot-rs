@@ -93,7 +93,7 @@ impl std::str::FromStr for ChatCommand {
 pub enum MessageType {
     Authenticated,
     Guests { count: i64 },
-    Advance(AdvanceMessage),
+    Advance(Box<AdvanceMessage>),
     ChatMessage(ChatMessage),
     WaitlistUpdate { user_ids: Vec<String> },
 }

@@ -23,7 +23,7 @@ pub trait IntoAnyhow<T> {
 
 impl<T> IntoAnyhow<T> for surf::Result<T> {
     fn into_anyhow_error(self) -> anyhow::Result<T> {
-        self.map_err(|error| anyhow::Error::msg(error))
+        self.map_err(anyhow::Error::msg)
     }
 }
 

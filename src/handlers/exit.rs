@@ -16,10 +16,9 @@ impl Handler for Exit {
             return Ok(());
         };
 
-        match command.as_str() {
-            "exit" => api.exit().await,
-            _ => (),
-        };
+        if command.as_str() == "exit" {
+            api.exit().await;
+        }
 
         Ok(())
     }
