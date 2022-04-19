@@ -69,12 +69,11 @@ impl Emotes {
             trs
         );
 
-        let body = minify_html::minify(
-            body.as_bytes(),
-            &minify_html::Cfg::default(),
-        );
+        let body = minify_html::minify(body.as_bytes(), &minify_html::Cfg::default());
 
-        let html = html_index::new().raw_body(std::str::from_utf8(&body)?).inline_style(TACHYONS);
+        let html = html_index::new()
+            .raw_body(std::str::from_utf8(&body)?)
+            .inline_style(TACHYONS);
 
         Ok(html.build())
     }

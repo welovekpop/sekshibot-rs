@@ -18,7 +18,7 @@ pub fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let (sender, receiver) = sync_channel(1);
 
-    transform_direct(input.clone(), options.clone(), move |result| {
+    transform_direct(input, options, move |result| {
         let code = result.code.as_str();
         fs::write(output, code).unwrap();
         sender.send(()).unwrap();
