@@ -42,7 +42,7 @@ impl Emotes {
             )?;
         }
 
-        let mut body = format!(
+        let body = format!(
             r#"
             <body class="bg-dark-gray near-white mh5 mv3">
               <table class="collapse" style="margin: auto">
@@ -69,16 +69,12 @@ impl Emotes {
             trs
         );
 
-        let body = minify_html::in_place_str(
-            &mut body,
-            &minify_html::Cfg {
-                minify_js: false,
-                minify_css: false,
-            },
-        )
-        .unwrap();
+        let body = minify_html::minify(
+            body.as_bytes(),
+            &minify_html::Cfg::default(),
+        );
 
-        let html = html_index::new().raw_body(body).inline_style(TACHYONS);
+        let html = html_index::new().raw_body(std::str::from_utf8(&body)?).inline_style(TACHYONS);
 
         Ok(html.build())
     }

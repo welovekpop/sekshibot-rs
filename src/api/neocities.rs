@@ -1,6 +1,6 @@
 use crate::IntoAnyhow;
 use serde::Deserialize;
-use sha1::Sha1;
+use sha1_smol::Sha1;
 use std::io::Cursor;
 use surf::Request;
 use thiserror::Error;
