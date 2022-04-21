@@ -112,7 +112,7 @@ impl Handler for Emotes {
             }
             "emotes" => {
                 let page = self.render_emote_page()?;
-                let url = neocities::publish("emotes.html", &page).await?;
+                let url = neocities::publish("emotes.html", &page)?;
                 api.send_message(url).await;
                 Ok(())
             }

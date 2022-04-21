@@ -1,6 +1,5 @@
 use crate::api::uwave::{HistoryOptions, SkipOptions};
 use crate::handler::{Api, Handler, MessageType};
-use crate::IntoAnyhow;
 use anyhow::Result;
 use chrono::{Duration, Utc};
 use chrono_humanize::{Accuracy, HumanTime, Tense};
@@ -16,14 +15,10 @@ impl Handler for HistorySkip {
             _ => return Ok(()),
         };
 
-        let results = api
-            .http
-            .history(HistoryOptions {
-                media: Some(message.media.media.id.clone()),
-                ..Default::default()
-            })
-            .await
-            .into_anyhow_error()?;
+        let results = api.http.history(HistoryOptions {
+            media: Some(message.media.media.id.clone()),
+            ..Default::default()
+        })?;
 
         let recent_entry = results
             .into_iter()
@@ -44,14 +39,11 @@ impl Handler for HistorySkip {
 
             api.send_message(format!("This song was played {}.", human_time))
                 .await;
-            api.http
-                .skip(SkipOptions {
-                    reason: Some("history".to_string()),
-                    user_id: message.user_id.clone(),
-                    remove: false,
-                })
-                .await
-                .into_anyhow_error()?;
+            api.http.skip(SkipOptions {
+                reason: Some("history".to_string()),
+                user_id: message.user_id.clone(),
+                remove: false,
+            })?;
         }
 
         Ok(())

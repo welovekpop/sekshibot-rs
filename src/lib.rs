@@ -13,19 +13,10 @@ use async_tungstenite::tungstenite::Message;
 use async_tungstenite::WebSocketStream;
 use futures::prelude::*;
 use sled::Db;
+use ureq::{Agent, AgentBuilder};
 
 // Expose so the CLI can use a special exit code
 pub use crate::api::uwave::UnauthorizedError;
-
-pub trait IntoAnyhow<T> {
-    fn into_anyhow_error(self) -> anyhow::Result<T>;
-}
-
-impl<T> IntoAnyhow<T> for surf::Result<T> {
-    fn into_anyhow_error(self) -> anyhow::Result<T> {
-        self.map_err(anyhow::Error::msg)
-    }
-}
 
 #[derive(Debug, Clone)]
 pub struct ConnectionOptions {
@@ -37,6 +28,7 @@ pub struct ConnectionOptions {
 
 pub struct SekshiBot {
     database: Db,
+    client: Agent,
     socket: WebSocketStream<ConnectStream>,
     api_url: String,
     api_auth: String,
@@ -46,23 +38,16 @@ pub struct SekshiBot {
 impl SekshiBot {
     pub async fn connect(options: ConnectionOptions) -> anyhow::Result<Self> {
         let url = |endpoint: &str| format!("{}/{}", options.api_url, endpoint);
-        let client = surf::client();
+        let client = AgentBuilder::new().build();
 
         log::info!("signing in...");
-        let login = {
-            let req = surf::post(&url("auth/login"))
-                .body(serde_json::json!({
-                    "email": options.email,
-                    "password": options.password,
-                }))
-                .build();
-
-            let mut response = client.send(req).await.into_anyhow_error()?;
-            response
-                .body_json::<serde_json::Value>()
-                .await
-                .into_anyhow_error()?
-        };
+        let login = client
+            .post(&url("auth/login"))
+            .send_json(serde_json::json!({
+                "email": options.email,
+                "password": options.password,
+            }))?
+            .into_json::<serde_json::Value>()?;
 
         let jwt = if let Some(jwt) = login["meta"]["jwt"].as_str() {
             jwt.to_string()
@@ -72,16 +57,11 @@ impl SekshiBot {
         let api_auth = format!("JWT {}", jwt);
 
         log::info!("loading state...");
-        let now = {
-            let req = surf::get(&url("now"))
-                .header("Authorization", &api_auth)
-                .build();
-            let mut response = client.send(req).await.into_anyhow_error()?;
-            response
-                .body_json::<serde_json::Value>()
-                .await
-                .into_anyhow_error()?
-        };
+        let now = client
+            .get(&url("now"))
+            .set("Authorization", &api_auth)
+            .call()?
+            .into_json::<serde_json::Value>()?;
 
         let socket_token = match &now["socketToken"] {
             serde_json::Value::Null => None,
@@ -102,6 +82,7 @@ impl SekshiBot {
 
         let mut bot = Self {
             database,
+            client,
             socket,
             api_url: options.api_url,
             api_auth,
@@ -131,7 +112,7 @@ impl SekshiBot {
 
         let mut socket = self.socket.fuse();
         let mut handlers = self.handlers;
-        let http_api = HttpApi::new(surf::client(), &self.api_url, &self.api_auth);
+        let http_api = HttpApi::new(self.client, &self.api_url, &self.api_auth);
 
         #[cfg(unix)]
         let mut signal_receiver = {
