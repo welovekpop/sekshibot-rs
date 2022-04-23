@@ -97,7 +97,7 @@ impl Handler for Emotes {
                 match self.tree.get(emote_name)? {
                     Some(bytes) => {
                         let emote = String::from_utf8(bytes.as_ref().to_vec())?;
-                        api.send_message(emote).await;
+                        api.send_message(emote);
                         Ok(())
                     }
                     None => Ok(()),
@@ -113,7 +113,7 @@ impl Handler for Emotes {
             "emotes" => {
                 let page = self.render_emote_page()?;
                 let url = neocities::publish("emotes.html", &page)?;
-                api.send_message(url).await;
+                api.send_message(url);
                 Ok(())
             }
             _ => Ok(()),

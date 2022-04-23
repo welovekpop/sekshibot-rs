@@ -41,6 +41,14 @@ struct SkipEntry {
     reason: String,
 }
 
+fn get_media_from_now(now: &serde_json::Value) -> Option<Media> {
+    let media = now.get("booth")?.get("media")?.get("media")?;
+    Some(Media {
+        source_type: media.get("sourceType")?.as_str()?.to_string(),
+        source_id: media.get("sourceID")?.as_str()?.to_string(),
+    })
+}
+
 #[derive(Debug)]
 pub struct SkipList {
     tree: sled::Tree,
@@ -50,16 +58,7 @@ impl SkipList {
     pub fn new(bot: &mut SekshiBot, now: &serde_json::Value) -> anyhow::Result<Self> {
         Ok(Self {
             tree: bot.database.open_tree("skiplist")?,
-            current_media: now
-                .get("booth")
-                .and_then(|booth| booth.get("media"))
-                .and_then(|media| media.get("media"))
-                .and_then(|media| {
-                    Some(Media {
-                        source_type: media.get("sourceType")?.as_str()?.to_string(),
-                        source_id: media.get("sourceID")?.as_str()?.to_string(),
-                    })
-                }),
+            current_media: get_media_from_now(now),
         })
     }
 
@@ -84,7 +83,7 @@ impl SkipList {
         }
     }
 
-    async fn process_skip(
+    fn process_skip(
         &mut self,
         api: Api<'_>,
         args: &[String],
@@ -98,12 +97,12 @@ impl SkipList {
                 if let Some(media) = self.current_media.clone() {
                     self.add_skip_entry(media, reason)?;
                 } else {
-                    api.send_message("usage: !skiplist <media> <reason>").await;
+                    api.send_message("usage: !skiplist <media> <reason>");
                     return Ok(());
                 }
             }
             _ => {
-                api.send_message("usage: !skiplist [media] <reason>").await;
+                api.send_message("usage: !skiplist [media] <reason>");
                 return Ok(());
             }
         }
@@ -115,7 +114,7 @@ impl SkipList {
         Ok(())
     }
 
-    async fn handle_chat_message(
+    fn handle_chat_message(
         &mut self,
         api: Api<'_>,
         message: &ChatMessage,
@@ -129,16 +128,16 @@ impl SkipList {
             "skiplist" | "blacklist" => {
                 match arguments.get(1).cloned().as_deref() {
                     Some("add") => {
-                        self.process_skip(api, &arguments[2..], false).await?;
+                        self.process_skip(api, &arguments[2..], false)?;
                     }
                     Some("skip") => {
-                        self.process_skip(api, &arguments[2..], true).await?;
+                        self.process_skip(api, &arguments[2..], true)?;
                     }
                     Some(_) => {
-                        self.process_skip(api, &arguments[1..], false).await?;
+                        self.process_skip(api, &arguments[1..], false)?;
                     }
                     None => {
-                        api.send_message("usage: !skiplist [media] <reason>").await;
+                        api.send_message("usage: !skiplist [media] <reason>");
                     }
                 }
 
@@ -148,7 +147,7 @@ impl SkipList {
         }
     }
 
-    async fn handle_advance(
+    fn handle_advance(
         &mut self,
         api: Api<'_>,
         message: &AdvanceMessage,
@@ -178,8 +177,8 @@ impl SkipList {
 impl Handler for SkipList {
     async fn handle(&mut self, api: Api<'_>, message: &MessageType) -> anyhow::Result<()> {
         match message {
-            MessageType::ChatMessage(message) => self.handle_chat_message(api, message).await,
-            MessageType::Advance(message) => self.handle_advance(api, message).await,
+            MessageType::ChatMessage(message) => self.handle_chat_message(api, message),
+            MessageType::Advance(message) => self.handle_advance(api, message),
             _ => return Ok(()),
         }
     }

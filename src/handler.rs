@@ -1,6 +1,6 @@
 use crate::api::uwave::{BaseMedia, HttpApi, MediaWithOverrides};
 use anyhow::{bail, Error, Result};
-use async_channel::Sender;
+use flume::Sender;
 use serde::Deserialize;
 use std::fmt::Display;
 
@@ -140,15 +140,12 @@ impl<'s> Api<'s> {
         Self { sender, http }
     }
 
-    pub async fn send_message(&self, message: impl Display) {
-        self.sender
-            .send(ApiMessage::SendChat(message.to_string()))
-            .await
-            .unwrap();
+    pub fn send_message(&self, message: impl Display) {
+        self.sender.send(ApiMessage::SendChat(message.to_string())).unwrap();
     }
 
-    pub async fn exit(&self) {
-        self.sender.send(ApiMessage::Exit).await.unwrap();
+    pub fn exit(&self) {
+        self.sender.send(ApiMessage::Exit).unwrap();
     }
 }
 

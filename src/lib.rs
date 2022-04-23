@@ -104,11 +104,8 @@ impl SekshiBot {
     }
 
     pub async fn run(self) -> anyhow::Result<()> {
-        let (api_sender, api_receiver) = async_channel::bounded(10);
-        let (received_message_sender, received_message_receiver) = async_channel::bounded(10);
-
-        let mut api_receiver = api_receiver.fuse();
-        let mut received_message_receiver = received_message_receiver.fuse();
+        let (api_sender, api_receiver) = flume::bounded(10);
+        let (received_message_sender, received_message_receiver) = flume::bounded(10);
 
         let mut socket = self.socket.fuse();
         let mut handlers = self.handlers;
@@ -149,7 +146,7 @@ impl SekshiBot {
             loop {
                 futures::select!(
                     _ = signal_receiver.read_exact(&mut signal_buffer).fuse() => {
-                        exit_sender.send(handler::ApiMessage::Exit).await?;
+                        exit_sender.send(handler::ApiMessage::Exit)?;
                     }
                     message = socket.try_next() => {
                         let message = match message {
@@ -176,18 +173,18 @@ impl SekshiBot {
                         let message: handler::Message = serde_json::from_str(&message).unwrap();
 
                         if let Some(message_type) = message.into_message_type() {
-                            let _ = received_message_sender.send(message_type).await;
+                            let _ = received_message_sender.send(message_type);
                         }
                     },
-                    message = api_receiver.next() => match message {
-                        Some(handler::ApiMessage::SendChat(message)) => {
+                    message = api_receiver.recv_async() => match message {
+                        Ok(handler::ApiMessage::SendChat(message)) => {
                             log::info!("sending chat message: {}", message);
                             socket.send(Message::Text(serde_json::json!({
                                 "command": "sendChat",
                                 "data": message,
                             }).to_string())).await?;
                         }
-                        Some(handler::ApiMessage::Exit) | None => {
+                        Ok(handler::ApiMessage::Exit) | Err(_) => {
                             log::info!("logging out");
                             socket.send(Message::Text(serde_json::json!({ "command": "logout" }).to_string())).await?;
                             socket.close().await?;
@@ -203,7 +200,7 @@ impl SekshiBot {
         let handle_messages = async move {
             let mut retval = Ok(());
 
-            'outer: while let Some(message) = received_message_receiver.next().await {
+            'outer: while let Ok(message) = received_message_receiver.recv_async().await {
                 log::info!("handling message {:?}", message);
                 let api = handler::Api::new(api_sender.clone(), http_api.clone());
                 for handler in handlers.iter_mut() {
@@ -212,13 +209,12 @@ impl SekshiBot {
                         Err(err) => {
                             // Exit if we are no longer authenticated so the bot can be restarted
                             if err.is::<UnauthorizedError>() {
-                                api.exit().await;
+                                api.exit();
                                 retval = Err(err);
                                 break 'outer;
                             }
 
-                            api.send_message(format_args!("Could not handle message: {}", err))
-                                .await;
+                            api.send_message(format_args!("Could not handle message: {}", err));
                         }
                     }
                 }
