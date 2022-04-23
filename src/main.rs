@@ -34,8 +34,7 @@ fn main() -> Result<()> {
             socket_url: args.socket_url,
             email,
             password,
-        })
-        .await?;
+        })?;
 
         bot.run().await
     });
