@@ -21,9 +21,9 @@ minify-html = "0.8.0"
 native-tls = "0.2.10"
 nom = { version = "7.0.0", features = ["std"], default-features = false }
 quit = "1.1.0"
-# r2d2 = "0.8.9"
-# r2d2_sqlite = "0.20.0"
-# rusqlite = { version = "0.27.0", features = ["modern"] }
+r2d2 = "0.8.9"
+r2d2_sqlite = "0.20.0"
+rusqlite = { version = "0.27.0", features = ["bundled"] }
 serde = { version = "1.0.114", features = ["derive"] }
 serde_json = "1.0.56"
 sha1_smol = "1.0.0"

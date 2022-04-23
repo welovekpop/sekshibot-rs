@@ -13,6 +13,7 @@ use std::net::TcpStream;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::time::Duration;
+use r2d2_sqlite::SqliteConnectionManager;
 use tungstenite::stream::MaybeTlsStream;
 use tungstenite::Message;
 use ureq::{Agent, AgentBuilder};
@@ -31,6 +32,7 @@ pub struct ConnectionOptions {
 }
 
 pub struct SekshiBot {
+    pool: r2d2::Pool<SqliteConnectionManager>,
     database: Db,
     client: Agent,
     socket: WebSocket,
@@ -102,12 +104,15 @@ impl SekshiBot {
             .flush_every_ms(Some(1000))
             .path("sekshi.db")
             .open()?;
+        let manager = SqliteConnectionManager::file("sekshi.sqlite");
+        let pool = r2d2::Pool::new(manager).unwrap();
 
         if let Some(token) = socket_token {
             socket.write_message(Message::Text(token.to_string()))?;
         }
 
         let mut bot = Self {
+            pool,
             database,
             client,
             socket,
@@ -137,6 +142,7 @@ impl SekshiBot {
         let (api_sender, api_receiver) = flume::bounded(10);
         let (received_message_sender, received_message_receiver) = flume::bounded(10);
 
+        let pool = self.pool;
         let mut socket = self.socket;
         let mut handlers = self.handlers;
         let http_api = HttpApi::new(self.client, self.api_url, self.api_auth);
@@ -224,7 +230,7 @@ impl SekshiBot {
 
                 // TODO spawn these onto a threadpool
                 log::info!("handling message {:?}", message);
-                let api = handler::Api::new(api_sender.clone(), http_api.clone());
+                let api = handler::Api::new(api_sender.clone(), pool.clone(), http_api.clone());
                 for handler in handlers.iter_mut() {
                     match handler.handle(api.clone(), &message) {
                         Ok(..) => (),
