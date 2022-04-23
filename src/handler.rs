@@ -131,12 +131,12 @@ pub enum ApiMessage {
 }
 
 #[derive(Clone)]
-pub struct Api<'s> {
+pub struct Api {
     sender: Sender<ApiMessage>,
-    pub http: HttpApi<'s>,
+    pub http: HttpApi,
 }
-impl<'s> Api<'s> {
-    pub fn new(sender: Sender<ApiMessage>, http: HttpApi<'s>) -> Self {
+impl Api {
+    pub fn new(sender: Sender<ApiMessage>, http: HttpApi) -> Self {
         Self { sender, http }
     }
 
@@ -149,9 +149,8 @@ impl<'s> Api<'s> {
     }
 }
 
-#[async_trait::async_trait]
 pub trait Handler: std::fmt::Debug {
-    async fn handle(&mut self, bot: Api<'_>, message: &MessageType) -> Result<()>;
+    fn handle(&mut self, bot: Api, message: &MessageType) -> Result<()>;
 }
 
 #[cfg(test)]

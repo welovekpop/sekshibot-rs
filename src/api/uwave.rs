@@ -99,14 +99,14 @@ pub struct HistoryEntry<TMedia> {
 }
 
 #[derive(Clone)]
-pub struct HttpApi<'s> {
+pub struct HttpApi {
     client: Agent,
-    api_url: &'s str,
-    auth: &'s str,
+    api_url: String,
+    auth: String,
 }
 
-impl<'s> HttpApi<'s> {
-    pub fn new(client: Agent, api_url: &'s str, auth: &'s str) -> Self {
+impl HttpApi {
+    pub fn new(client: Agent, api_url: String, auth: String) -> Self {
         Self {
             client,
             api_url,
@@ -115,7 +115,7 @@ impl<'s> HttpApi<'s> {
     }
 
     fn url(&self, endpoint: &str) -> String {
-        format!("{}/{}", self.api_url, endpoint)
+        format!("{}/{}", &self.api_url, endpoint)
     }
 
     pub fn history(&self, opts: HistoryOptions) -> anyhow::Result<Vec<HistoryEntry<BaseMedia>>> {
@@ -167,7 +167,7 @@ impl<'s> HttpApi<'s> {
         let response = self
             .client
             .post(&self.url("booth/skip"))
-            .set("Authorization", self.auth)
+            .set("Authorization", &self.auth)
             .send_json(json!({
                 "reason": opts.reason.unwrap_or_default(),
                 "userID": opts.user_id,
@@ -180,10 +180,10 @@ impl<'s> HttpApi<'s> {
     }
 }
 
-impl<'s> Debug for HttpApi<'s> {
+impl Debug for HttpApi {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         f.debug_struct("HttpApi")
-            .field("agent", &())
+            .field("client", &())
             .field("api_url", &self.api_url)
             .field("auth", &self.auth)
             .finish()

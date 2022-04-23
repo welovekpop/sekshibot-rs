@@ -12,6 +12,7 @@ use async_tungstenite::async_std::{connect_async, ConnectStream};
 use async_tungstenite::tungstenite::Message;
 use async_tungstenite::WebSocketStream;
 use futures::prelude::*;
+use flume::Selector;
 use sled::Db;
 use ureq::{Agent, AgentBuilder};
 
@@ -109,7 +110,7 @@ impl SekshiBot {
 
         let mut socket = self.socket.fuse();
         let mut handlers = self.handlers;
-        let http_api = HttpApi::new(self.client, &self.api_url, &self.api_auth);
+        let http_api = HttpApi::new(self.client, self.api_url, self.api_auth);
 
         #[cfg(unix)]
         let mut signal_receiver = {
@@ -197,14 +198,16 @@ impl SekshiBot {
             anyhow::Result::<()>::Ok(())
         };
 
-        let handle_messages = async move {
+        let (end_sender, end_receiver) = flume::bounded(1);
+        std::thread::spawn(move || {
             let mut retval = Ok(());
 
-            'outer: while let Ok(message) = received_message_receiver.recv_async().await {
+            'outer: while let Ok(message) = received_message_receiver.recv() {
+                // TODO spawn these onto a threadpool
                 log::info!("handling message {:?}", message);
                 let api = handler::Api::new(api_sender.clone(), http_api.clone());
                 for handler in handlers.iter_mut() {
-                    match handler.handle(api.clone(), &message).await {
+                    match handler.handle(api.clone(), &message) {
                         Ok(..) => (),
                         Err(err) => {
                             // Exit if we are no longer authenticated so the bot can be restarted
@@ -220,10 +223,10 @@ impl SekshiBot {
                 }
             }
 
-            retval
-        };
+            end_sender.send(retval).unwrap();
+        });
 
-        let (socket_stream, handler_result) = futures::join!(socket_stream, handle_messages);
+        let (socket_stream, handler_result) = futures::join!(socket_stream, end_receiver.recv_async());
         let _ = socket_stream?;
         let _ = handler_result?;
 

@@ -85,7 +85,7 @@ impl SkipList {
 
     fn process_skip(
         &mut self,
-        api: Api<'_>,
+        api: Api,
         args: &[String],
         do_skip: bool,
     ) -> anyhow::Result<()> {
@@ -116,7 +116,7 @@ impl SkipList {
 
     fn handle_chat_message(
         &mut self,
-        api: Api<'_>,
+        api: Api,
         message: &ChatMessage,
     ) -> anyhow::Result<()> {
         let ChatCommand { command, arguments } = match message.command() {
@@ -149,7 +149,7 @@ impl SkipList {
 
     fn handle_advance(
         &mut self,
-        api: Api<'_>,
+        api: Api,
         message: &AdvanceMessage,
     ) -> anyhow::Result<()> {
         let media = Media {
@@ -173,9 +173,8 @@ impl SkipList {
     }
 }
 
-#[async_trait::async_trait]
 impl Handler for SkipList {
-    async fn handle(&mut self, api: Api<'_>, message: &MessageType) -> anyhow::Result<()> {
+    fn handle(&mut self, api: Api, message: &MessageType) -> anyhow::Result<()> {
         match message {
             MessageType::ChatMessage(message) => self.handle_chat_message(api, message),
             MessageType::Advance(message) => self.handle_advance(api, message),

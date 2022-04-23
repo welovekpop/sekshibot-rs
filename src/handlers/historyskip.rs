@@ -7,9 +7,8 @@ use chrono_humanize::{Accuracy, HumanTime, Tense};
 #[derive(Debug)]
 pub struct HistorySkip;
 
-#[async_trait::async_trait]
 impl Handler for HistorySkip {
-    async fn handle(&mut self, api: Api<'_>, message: &MessageType) -> Result<()> {
+    fn handle(&mut self, api: Api, message: &MessageType) -> Result<()> {
         let message = match message {
             MessageType::Advance(advance) => advance,
             _ => return Ok(()),
