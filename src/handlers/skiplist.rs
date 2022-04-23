@@ -83,12 +83,7 @@ impl SkipList {
         }
     }
 
-    fn process_skip(
-        &mut self,
-        api: Api,
-        args: &[String],
-        do_skip: bool,
-    ) -> anyhow::Result<()> {
+    fn process_skip(&mut self, api: Api, args: &[String], do_skip: bool) -> anyhow::Result<()> {
         match args {
             [media, reason] => {
                 self.add_skip_entry(media.parse()?, reason)?;
@@ -114,11 +109,7 @@ impl SkipList {
         Ok(())
     }
 
-    fn handle_chat_message(
-        &mut self,
-        api: Api,
-        message: &ChatMessage,
-    ) -> anyhow::Result<()> {
+    fn handle_chat_message(&mut self, api: Api, message: &ChatMessage) -> anyhow::Result<()> {
         let ChatCommand { command, arguments } = match message.command() {
             Some(c) => c,
             None => return Ok(()),
@@ -147,11 +138,7 @@ impl SkipList {
         }
     }
 
-    fn handle_advance(
-        &mut self,
-        api: Api,
-        message: &AdvanceMessage,
-    ) -> anyhow::Result<()> {
+    fn handle_advance(&mut self, api: Api, message: &AdvanceMessage) -> anyhow::Result<()> {
         let media = Media {
             source_type: message.media.media.source_type.clone(),
             source_id: message.media.media.source_id.clone(),

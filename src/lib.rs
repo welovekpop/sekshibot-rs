@@ -8,11 +8,13 @@ mod api {
 
 use crate::api::uwave::HttpApi;
 use crate::handler::Handler;
-use std::net::TcpStream;
-use std::time::Duration;
-use tungstenite::Message;
-use tungstenite::stream::MaybeTlsStream;
 use sled::Db;
+use std::net::TcpStream;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
+use std::time::Duration;
+use tungstenite::stream::MaybeTlsStream;
+use tungstenite::Message;
 use ureq::{Agent, AgentBuilder};
 
 // Expose so the CLI can use a special exit code
@@ -38,8 +40,8 @@ pub struct SekshiBot {
 }
 
 fn connect_ws(url: &str) -> anyhow::Result<WebSocket> {
-    use url::Url;
     use native_tls::TlsConnector;
+    use url::Url;
     let url = Url::parse(url)?;
     if url.scheme() == "wss" {
         let socket_addrs = url.socket_addrs(|| None)?.pop().unwrap();
@@ -53,7 +55,8 @@ fn connect_ws(url: &str) -> anyhow::Result<WebSocket> {
     } else {
         let socket_addrs = url.socket_addrs(|| None)?.pop().unwrap();
         let stream = TcpStream::connect(socket_addrs)?;
-        let (socket, _response) = tungstenite::client(url, MaybeTlsStream::Plain(stream.try_clone()?))?;
+        let (socket, _response) =
+            tungstenite::client(url, MaybeTlsStream::Plain(stream.try_clone()?))?;
         stream.set_nonblocking(true)?;
         Ok(socket)
     }
@@ -127,7 +130,10 @@ impl SekshiBot {
         self.handlers.push(Box::new(handler));
     }
 
-    pub async fn run(self) -> anyhow::Result<()> {
+    pub fn run(self) -> anyhow::Result<()> {
+        let exit_flag = Arc::new(AtomicBool::new(false));
+        signal_hook::flag::register(signal_hook::consts::SIGTERM, Arc::clone(&exit_flag))?;
+
         let (api_sender, api_receiver) = flume::bounded(10);
         let (received_message_sender, received_message_receiver) = flume::bounded(10);
 
@@ -135,40 +141,9 @@ impl SekshiBot {
         let mut handlers = self.handlers;
         let http_api = HttpApi::new(self.client, self.api_url, self.api_auth);
 
-        #[cfg(unix)]
-        let mut signal_receiver = {
-            use async_std::os::unix::net::UnixStream;
-            use signal_hook::pipe::register;
-            use signal_hook::SIGINT;
-
-            let (sender, receiver) = UnixStream::pair()?;
-            register(SIGINT, sender)?;
-            receiver
-        };
-        #[cfg(not(unix))]
-        let mut signal_receiver = {
-            use async_std::io::{Read, Result};
-            use std::pin::Pin;
-            use std::task::{Context, Poll};
-
-            struct NeverReady;
-            impl Read for NeverReady {
-                fn poll_read(
-                    self: Pin<&mut Self>,
-                    _: &mut Context,
-                    _: &mut [u8],
-                ) -> Poll<Result<usize>> {
-                    Poll::Pending
-                }
-            }
-            NeverReady
-        };
-
-        let exit_sender = api_sender.clone();
-        let mut signal_buffer = [0u8];
-
+        let socket_exit_flag = Arc::clone(&exit_flag);
         let socket_thread = std::thread::spawn(move || {
-            loop {
+            while !socket_exit_flag.load(Ordering::Relaxed) {
                 // Process all queued messages.
                 loop {
                     let message = socket.read_message();
@@ -181,15 +156,18 @@ impl SekshiBot {
                         }
                         Ok(Message::Close(_)) => {
                             log::info!("connection ended");
-                            break
-                        },
+                            break;
+                        }
                         Ok(_) => None,
-                        Err(tungstenite::Error::Io(io_err)) if io_err.kind() == std::io::ErrorKind::WouldBlock => {
+                        Err(tungstenite::Error::Io(io_err))
+                            if io_err.kind() == std::io::ErrorKind::WouldBlock =>
+                        {
                             break
-                        },
+                        }
                         Err(tungstenite::Error::ConnectionClosed) => {
                             log::info!("connection closed");
-                            return Ok(())
+                            socket_exit_flag.store(true, Ordering::Relaxed);
+                            return Ok(());
                         }
                         Err(err) => {
                             todo!("handle error {:?}", err)
@@ -217,10 +195,10 @@ impl SekshiBot {
                     }
                     Ok(handler::ApiMessage::Exit) | Err(_) => {
                         log::info!("logging out");
-                        let logout =  serde_json::json!({ "command": "logout" });
+                        let logout = serde_json::json!({ "command": "logout" });
                         socket.write_message(Message::Text(logout.to_string()))?;
                         socket.close(None)?;
-                        break
+                        break;
                     }
                 }
             }
@@ -228,19 +206,22 @@ impl SekshiBot {
             anyhow::Result::<()>::Ok(())
         });
 
-        let socket_stream = async move {
-            use futures::prelude::*;
-            signal_receiver.read_exact(&mut signal_buffer).await?;
-            exit_sender.send(handler::ApiMessage::Exit)?;
-
-            anyhow::Result::<()>::Ok(())
-        };
-
-        let (end_sender, end_receiver) = flume::bounded(1);
-        std::thread::spawn(move || {
+        let (handler_end_sender, end_receiver) = flume::bounded(1);
+        let handler_exit_flag = Arc::clone(&exit_flag);
+        let handler_thread = std::thread::spawn(move || {
             let mut retval = Ok(());
 
-            'outer: while let Ok(message) = received_message_receiver.recv() {
+            'outer: while !handler_exit_flag.load(Ordering::Relaxed) {
+                let message =
+                    match received_message_receiver.recv_timeout(Duration::from_millis(16)) {
+                        Ok(message) => message,
+                        Err(flume::RecvTimeoutError::Timeout) => continue,
+                        Err(err) => {
+                            log::warn!("handler exiting because: {:?}", err);
+                            break;
+                        }
+                    };
+
                 // TODO spawn these onto a threadpool
                 log::info!("handling message {:?}", message);
                 let api = handler::Api::new(api_sender.clone(), http_api.clone());
@@ -261,13 +242,16 @@ impl SekshiBot {
                 }
             }
 
-            end_sender.send(retval).unwrap();
+            handler_end_sender.send(retval).unwrap();
         });
 
-        let (socket_stream, handler_result) = futures::join!(socket_stream, end_receiver.recv_async());
-        let _ = socket_stream?;
-        let _ = handler_result?;
+        let result = flume::Selector::new()
+            .recv(&end_receiver, |err| err)
+            .wait()?;
 
-        Ok(())
+        socket_thread.join().unwrap()?;
+        handler_thread.join().unwrap();
+
+        result
     }
 }

@@ -28,7 +28,7 @@ fn main() -> Result<()> {
         _ => bail!("missing SEKSHIBOT_PASSWORD env var"),
     };
 
-    let result = async_std::task::block_on(async move {
+    let result = (|| {
         let bot = SekshiBot::connect(ConnectionOptions {
             api_url: args.api_url,
             socket_url: args.socket_url,
@@ -36,8 +36,8 @@ fn main() -> Result<()> {
             password,
         })?;
 
-        bot.run().await
-    });
+        bot.run()
+    })();
 
     match result {
         Ok(_) => Ok(()),

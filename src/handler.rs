@@ -141,7 +141,9 @@ impl Api {
     }
 
     pub fn send_message(&self, message: impl Display) {
-        self.sender.send(ApiMessage::SendChat(message.to_string())).unwrap();
+        self.sender
+            .send(ApiMessage::SendChat(message.to_string()))
+            .unwrap();
     }
 
     pub fn exit(&self) {
