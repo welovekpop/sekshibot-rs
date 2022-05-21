@@ -37,9 +37,5 @@ ureq = { version = "2.4.0", features = ["json"] }
 url = "2.2.2"
 yolofd = { git = "https://github.com/goto-bus-stop/yolofd.git", branch = "default" }
 
-[build-dependencies]
-esbuild-rs = "0.13.8"
-tachyons = "0.1.1"
-
 [profile.release]
 lto = true

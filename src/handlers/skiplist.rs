@@ -1,8 +1,7 @@
 use crate::api::uwave::SkipOptions;
 use crate::handler::{AdvanceMessage, Api, ChatCommand, ChatMessage, Handler, MessageType};
-use crate::SekshiBot;
-use serde::{Deserialize, Serialize};
 use rusqlite::{params, Connection, OptionalExtension as _};
+use serde::{Deserialize, Serialize};
 use std::fmt::{self, Display, Formatter};
 use std::str::FromStr;
 
@@ -61,23 +60,33 @@ impl SkipList {
         }
     }
 
-    fn add_skip_entry(&mut self, db: &Connection, media: Media, reason: &str) -> anyhow::Result<()> {
+    fn add_skip_entry(
+        &mut self,
+        db: &Connection,
+        media: Media,
+        reason: &str,
+    ) -> anyhow::Result<()> {
         log::info!("add entry {:?} {:?}", media.to_string(), reason);
-        db.execute("INSERT INTO skiplist (source_type, source_id, reason) VALUES (?, ?, ?)", params![
-            media.source_type,
-            media.source_id,
-            reason,
-        ])?;
+        db.execute(
+            "INSERT INTO skiplist (source_type, source_id, reason) VALUES (?, ?, ?)",
+            params![media.source_type, media.source_id, reason,],
+        )?;
         Ok(())
     }
 
-    fn get_skip_entry(&mut self, db: &Connection, media: &Media) -> anyhow::Result<Option<SkipEntry>> {
+    fn get_skip_entry(
+        &mut self,
+        db: &Connection,
+        media: &Media,
+    ) -> anyhow::Result<Option<SkipEntry>> {
         log::info!("check entry {:?}", media.to_string());
-        let reason = db.query_row(
-            "SELECT reason FROM skiplist WHERE source_type = ? AND source_id = ?",
-            [&media.source_type, &media.source_id],
-            |row| row.get(0),
-        ).optional()?;
+        let reason = db
+            .query_row(
+                "SELECT reason FROM skiplist WHERE source_type = ? AND source_id = ?",
+                [&media.source_type, &media.source_id],
+                |row| row.get(0),
+            )
+            .optional()?;
         Ok(reason.map(|reason| SkipEntry { reason }))
     }
 

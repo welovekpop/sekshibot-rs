@@ -1,9 +1,9 @@
 use crate::api::uwave::{BaseMedia, HttpApi, MediaWithOverrides};
 use anyhow::{bail, Error, Result};
 use flume::Sender;
-use serde::Deserialize;
 use r2d2::PooledConnection;
 use r2d2_sqlite::SqliteConnectionManager;
+use serde::Deserialize;
 use std::fmt::Display;
 
 fn parse_message(input: &str) -> Result<(&str, Vec<&str>)> {
@@ -139,7 +139,11 @@ pub struct Api {
     pub http: HttpApi,
 }
 impl Api {
-    pub fn new(sender: Sender<ApiMessage>, pool: r2d2::Pool<SqliteConnectionManager>, http: HttpApi) -> Self {
+    pub fn new(
+        sender: Sender<ApiMessage>,
+        pool: r2d2::Pool<SqliteConnectionManager>,
+        http: HttpApi,
+    ) -> Self {
         Self { sender, pool, http }
     }
 

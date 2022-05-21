@@ -9,11 +9,11 @@ mod api {
 
 use crate::api::uwave::HttpApi;
 use crate::handler::Handler;
+use r2d2_sqlite::SqliteConnectionManager;
 use std::net::TcpStream;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::time::Duration;
-use r2d2_sqlite::SqliteConnectionManager;
 use tungstenite::stream::MaybeTlsStream;
 use tungstenite::Message;
 use ureq::{Agent, AgentBuilder};

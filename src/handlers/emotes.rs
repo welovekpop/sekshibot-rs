@@ -1,11 +1,9 @@
 use crate::api::neocities;
 use crate::handler::{Api, ChatCommand, Handler, MessageType};
 use crate::SekshiBot;
-use shorten_url::shorten;
 use rusqlite::{Connection, OptionalExtension as _};
+use shorten_url::shorten;
 use std::fmt::Write as _;
-
-const TACHYONS: &str = include_str!(concat!(env!("OUT_DIR"), "/tachyons.css"));
 
 #[derive(Debug)]
 pub struct Emotes;
@@ -15,7 +13,11 @@ impl Emotes {
     }
 
     fn get_emote(&self, db: &Connection, name: &str) -> anyhow::Result<Option<String>> {
-        let url = db.query_row("SELECT url FROM emotes WHERE name = ?", [name], |row| row.get(0)).optional()?;
+        let url = db
+            .query_row("SELECT url FROM emotes WHERE name = ?", [name], |row| {
+                row.get(0)
+            })
+            .optional()?;
         Ok(url)
     }
 
@@ -38,10 +40,10 @@ impl Emotes {
             write!(
                 &mut trs,
                 r#"
-                <tr class="stripe-dark">
-                  <td class="pv2 ph3 name">{id}</td>
-                  <td class="pv2 ph3">
-                    <a href="{url}" title="{url}" class="link dim light-pink" target="_blank">
+                <tr>
+                  <td class="name">{id}</td>
+                  <td>
+                    <a href="{url}" title="{url}" target="_blank">
                       {truncatedUrl}
                     </a>
                   </td>
@@ -55,11 +57,11 @@ impl Emotes {
 
         let body = format!(
             r#"
-            <body class="bg-dark-gray near-white mh5 mv3">
-              <table class="collapse" style="margin: auto">
+            <body>
+              <table>
                 <thead><tr>
-                  <th class="pv2 ph3 ttu">Name</th>
-                  <th class="pv2 ph3 ttu">URL</th>
+                  <th>Name</th>
+                  <th>URL</th>
                 </tr></thead>
                 <tbody>{}</tbody>
               </table>
@@ -84,7 +86,15 @@ impl Emotes {
 
         let html = html_index::new()
             .raw_body(std::str::from_utf8(&body)?)
-            .inline_style(TACHYONS);
+            .inline_style(r#"
+                body { margin: 1rem 4rem; background: #333; color: #f4f4f4; font-family: sans-serif; }
+                table { border-collapse: collapse; border-spacing: 0; margin: auto; }
+                tbody > tr:nth-child(2n+1) { background-color: #0000001a; }
+                th, td { padding: .5rem 1rem; }
+                th { text-transform: uppercase; }
+                a { text-decoration: none; color: #ffa3d7; }
+                a:hover { text-decoration: underline; }
+            "#);
 
         Ok(html.build())
     }

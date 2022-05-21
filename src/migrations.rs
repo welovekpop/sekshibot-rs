@@ -3,20 +3,24 @@ use rusqlite_migration::{Migrations, M};
 
 lazy_static! {
     pub static ref MIGRATIONS: Migrations<'static> = Migrations::new(vec![
-        M::up("
+        M::up(
+            "
             CREATE TABLE emotes (
                 name TEXT NOT NULL UNIQUE,
                 url TEXT NOT NULL
             ) STRICT;
-        "),
-        M::up("
+        "
+        ),
+        M::up(
+            "
             CREATE TABLE skiplist (
                 source_type TEXT NOT NULL,
                 source_id TEXT NOT NULL,
                 reason TEXT,
                 PRIMARY KEY (source_type, source_id)
             ) STRICT;
-        "),
+        "
+        ),
     ]);
 }
 

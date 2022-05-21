@@ -371,17 +371,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "esbuild-rs"
-version = "0.13.8"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "516a2353dabd00559c2f874993ad4fce114beefb27c2482643e2888888d99b93"
-dependencies = [
- "lazy_static",
- "libc",
- "memorymodule-rs",
-]
-
-[[package]]
 name = "event-listener"
 version = "2.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -811,16 +800,6 @@ name = "memchr"
 version = "2.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "308cc39be01b73d0d18f82a0e7b2a3df85245f84af96fdddc5d202d27e47b86a"
-
-[[package]]
-name = "memorymodule-rs"
-version = "0.0.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0c4ead5a227d30610a2dee54d4121a79184072f94865506420e535a778b8a681"
-dependencies = [
- "cc",
- "libc",
-]
 
 [[package]]
 name = "minify-html"
@@ -1325,7 +1304,6 @@ dependencies = [
  "base64",
  "chrono",
  "chrono-humanize",
- "esbuild-rs",
  "femme",
  "flume",
  "futures",
@@ -1347,7 +1325,6 @@ dependencies = [
  "sha1_smol",
  "shorten-url",
  "signal-hook",
- "tachyons",
  "thiserror",
  "tungstenite",
  "ureq",
@@ -1493,12 +1470,6 @@ dependencies = [
  "quote",
  "unicode-xid",
 ]
-
-[[package]]
-name = "tachyons"
-version = "0.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "26d40c7b1532b4d48f6affec0d9f58795be657dc5394d0c45b0e68768b91d2f7"
 
 [[package]]
 name = "tempfile"
