@@ -2,27 +2,38 @@ use crate::api::neocities;
 use crate::handler::{Api, ChatCommand, Handler, MessageType};
 use crate::SekshiBot;
 use shorten_url::shorten;
+use rusqlite::{Connection, OptionalExtension as _};
 use std::fmt::Write as _;
 
 const TACHYONS: &str = include_str!(concat!(env!("OUT_DIR"), "/tachyons.css"));
 
 #[derive(Debug)]
-pub struct Emotes {
-    tree: sled::Tree,
-}
+pub struct Emotes;
 impl Emotes {
-    pub fn new(bot: &mut SekshiBot) -> anyhow::Result<Self> {
-        Ok(Self {
-            tree: bot.database.open_tree("emotes")?,
-        })
+    pub fn new(_bot: &mut SekshiBot) -> anyhow::Result<Self> {
+        Ok(Self)
     }
 
-    fn render_emote_page(&self) -> anyhow::Result<String> {
+    fn get_emote(&self, db: &Connection, name: &str) -> anyhow::Result<Option<String>> {
+        let url = db.query_row("SELECT url FROM emotes WHERE name = ?", [name], |row| row.get(0)).optional()?;
+        Ok(url)
+    }
+
+    fn insert_emote(&self, db: &Connection, name: &str, url: &str) -> anyhow::Result<()> {
+        log::info!("insert {} {}", name, url);
+        db.execute("INSERT INTO emotes (name, url) VALUES (?, ?)", [name, url])?;
+        Ok(())
+    }
+
+    fn render_emote_page(&self, db: &Connection) -> anyhow::Result<String> {
+        let mut stmt = db.prepare("SELECT name, url FROM emotes")?;
+        let query = stmt.query_map([], |row| {
+            Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))
+        })?;
+
         let mut trs = String::new();
-        for pair in self.tree.iter() {
+        for pair in query {
             let (name, url) = pair?;
-            let name = std::str::from_utf8(&name)?;
-            let url = std::str::from_utf8(&url)?;
 
             write!(
                 &mut trs,
@@ -36,9 +47,9 @@ impl Emotes {
                   </td>
                 </tr>
                 "#,
-                id = html_escape::encode_text(name),
-                url = html_escape::encode_double_quoted_attribute(url),
-                truncatedUrl = html_escape::encode_text(&shorten(url, 50))
+                id = html_escape::encode_text(&name),
+                url = html_escape::encode_double_quoted_attribute(&url),
+                truncatedUrl = html_escape::encode_text(&shorten(&url, 50))
             )?;
         }
 
@@ -93,24 +104,20 @@ impl Handler for Emotes {
         match command.as_str() {
             "e" | "emote" => {
                 let emote_name = &arguments[0];
-                match self.tree.get(emote_name)? {
-                    Some(bytes) => {
-                        let emote = String::from_utf8(bytes.as_ref().to_vec())?;
-                        api.send_message(emote);
-                        Ok(())
-                    }
-                    None => Ok(()),
+                if let Some(url) = self.get_emote(&api.connection(), emote_name)? {
+                    api.send_message(url);
                 }
+                Ok(())
             }
             "addemote" => {
                 let emote_name = &arguments[0];
                 let emote_url = &arguments[1];
-                self.tree.insert(emote_name, emote_url.as_bytes())?;
-                log::info!("insert {} {}", emote_name, emote_url);
+                self.insert_emote(&api.connection(), emote_name, emote_url)?;
+                api.send_message(format_args!("{} added!", emote_name));
                 Ok(())
             }
             "emotes" => {
-                let page = self.render_emote_page()?;
+                let page = self.render_emote_page(&api.connection())?;
                 let url = neocities::publish("emotes.html", &page)?;
                 api.send_message(url);
                 Ok(())

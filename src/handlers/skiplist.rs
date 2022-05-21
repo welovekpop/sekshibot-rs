@@ -2,6 +2,7 @@ use crate::api::uwave::SkipOptions;
 use crate::handler::{AdvanceMessage, Api, ChatCommand, ChatMessage, Handler, MessageType};
 use crate::SekshiBot;
 use serde::{Deserialize, Serialize};
+use rusqlite::{params, Connection, OptionalExtension as _};
 use std::fmt::{self, Display, Formatter};
 use std::str::FromStr;
 
@@ -51,46 +52,43 @@ fn get_media_from_now(now: &serde_json::Value) -> Option<Media> {
 
 #[derive(Debug)]
 pub struct SkipList {
-    tree: sled::Tree,
     current_media: Option<Media>,
 }
 impl SkipList {
-    pub fn new(bot: &mut SekshiBot, now: &serde_json::Value) -> anyhow::Result<Self> {
-        Ok(Self {
-            tree: bot.database.open_tree("skiplist")?,
+    pub fn new(now: &serde_json::Value) -> Self {
+        Self {
             current_media: get_media_from_now(now),
-        })
+        }
     }
 
-    fn add_skip_entry(&mut self, media: Media, reason: &str) -> anyhow::Result<()> {
-        let media = media.to_string();
-        let entry = serde_json::to_vec(&SkipEntry {
-            reason: reason.to_string(),
-        })?;
-        log::info!("add entry {:?} {:?}", media, entry);
-        self.tree.insert(media, entry)?;
+    fn add_skip_entry(&mut self, db: &Connection, media: Media, reason: &str) -> anyhow::Result<()> {
+        log::info!("add entry {:?} {:?}", media.to_string(), reason);
+        db.execute("INSERT INTO skiplist (source_type, source_id, reason) VALUES (?, ?, ?)", params![
+            media.source_type,
+            media.source_id,
+            reason,
+        ])?;
         Ok(())
     }
 
-    fn get_skip_entry(&mut self, media: &Media) -> anyhow::Result<Option<SkipEntry>> {
-        let media = media.to_string();
-        log::info!("check entry {:?}", media);
-        if let Some(entry) = self.tree.get(media)? {
-            let entry = serde_json::from_slice(&entry)?;
-            Ok(Some(entry))
-        } else {
-            Ok(None)
-        }
+    fn get_skip_entry(&mut self, db: &Connection, media: &Media) -> anyhow::Result<Option<SkipEntry>> {
+        log::info!("check entry {:?}", media.to_string());
+        let reason = db.query_row(
+            "SELECT reason FROM skiplist WHERE source_type = ? AND source_id = ?",
+            [&media.source_type, &media.source_id],
+            |row| row.get(0),
+        ).optional()?;
+        Ok(reason.map(|reason| SkipEntry { reason }))
     }
 
     fn process_skip(&mut self, api: Api, args: &[String], do_skip: bool) -> anyhow::Result<()> {
         match args {
             [media, reason] => {
-                self.add_skip_entry(media.parse()?, reason)?;
+                self.add_skip_entry(&api.connection(), media.parse()?, reason)?;
             }
             [reason] => {
                 if let Some(media) = self.current_media.clone() {
-                    self.add_skip_entry(media, reason)?;
+                    self.add_skip_entry(&api.connection(), media, reason)?;
                 } else {
                     api.send_message("usage: !skiplist <media> <reason>");
                     return Ok(());
@@ -144,7 +142,7 @@ impl SkipList {
             source_id: message.media.media.source_id.clone(),
         };
 
-        if let Some(entry) = self.get_skip_entry(&media)? {
+        if let Some(entry) = self.get_skip_entry(&api.connection(), &media)? {
             api.http.skip(SkipOptions {
                 user_id: message.user_id.clone(),
                 reason: Some(format!(

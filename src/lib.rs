@@ -1,6 +1,7 @@
 #![recursion_limit = "512"]
 mod handler;
 mod handlers;
+mod migrations;
 mod api {
     pub mod neocities;
     pub mod uwave;
@@ -8,7 +9,6 @@ mod api {
 
 use crate::api::uwave::HttpApi;
 use crate::handler::Handler;
-use sled::Db;
 use std::net::TcpStream;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
@@ -33,7 +33,6 @@ pub struct ConnectionOptions {
 
 pub struct SekshiBot {
     pool: r2d2::Pool<SqliteConnectionManager>,
-    database: Db,
     client: Agent,
     socket: WebSocket,
     api_url: String,
@@ -100,12 +99,9 @@ impl SekshiBot {
 
         log::info!("connecting to {}...", options.socket_url);
         let mut socket = connect_ws(&options.socket_url)?;
-        let database = sled::Config::default()
-            .flush_every_ms(Some(1000))
-            .path("sekshi.db")
-            .open()?;
         let manager = SqliteConnectionManager::file("sekshi.sqlite");
         let pool = r2d2::Pool::new(manager).unwrap();
+        migrations::MIGRATIONS.to_latest(&mut pool.get().unwrap())?;
 
         if let Some(token) = socket_token {
             socket.write_message(Message::Text(token.to_string()))?;
@@ -113,7 +109,6 @@ impl SekshiBot {
 
         let mut bot = Self {
             pool,
-            database,
             client,
             socket,
             api_url: options.api_url,
@@ -121,11 +116,9 @@ impl SekshiBot {
             handlers: vec![],
         };
 
-        let emotes = handlers::Emotes::new(&mut bot)?;
-        bot.add_handler(emotes);
+        bot.add_handler(handlers::Emotes);
         bot.add_handler(handlers::Exit);
-        let skiplist = handlers::SkipList::new(&mut bot, &now)?;
-        bot.add_handler(skiplist);
+        bot.add_handler(handlers::SkipList::new(&now));
         bot.add_handler(handlers::HistorySkip);
 
         Ok(bot)
