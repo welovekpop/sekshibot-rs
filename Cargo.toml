@@ -6,19 +6,17 @@ edition = "2018"
 
 [dependencies]
 anyhow = "1.0.31"
-async-std = { version = "1.6.2" }
 base64 = "0.13.0"
 chrono = { version = "0.4.13", features = ["serde"] }
 chrono-humanize = "0.2.1"
 femme = "2.1.0"
-flume = { version = "0.10.12", features = ["async"] }
-futures = "0.3.5"
+flume = "0.10.12"
 gumdrop = "0.8.0"
 html-escape = "0.2.7"
 html-index = { version = "0.3.3", default-features = false }
 lazy_static = "1.4.0"
 log = "0.4.8"
-minify-html = "0.8.0"
+minify-html = "0.9.0"
 native-tls = "0.2.10"
 nom = { version = "7.0.0", features = ["std"], default-features = false }
 quit = "1.1.0"
