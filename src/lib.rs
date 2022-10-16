@@ -45,7 +45,7 @@ fn connect_ws(url: &str) -> anyhow::Result<WebSocket> {
     use url::Url;
     let url = Url::parse(url)?;
     if url.scheme() == "wss" {
-        let socket_addrs = url.socket_addrs(|| None)?.pop().unwrap();
+        let socket_addrs = url.socket_addrs(|| None)?.remove(0);
         let connector = TlsConnector::new()?;
         let stream = TcpStream::connect(socket_addrs)?;
         let tls_stream = connector.connect(url.host_str().unwrap(), stream.try_clone()?)?;
