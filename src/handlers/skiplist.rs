@@ -172,7 +172,7 @@ impl Handler for SkipList {
         match message {
             MessageType::ChatMessage(message) => self.handle_chat_message(api, message),
             MessageType::Advance(message) => self.handle_advance(api, message),
-            _ => return Ok(()),
+            _ => Ok(()),
         }
     }
 }

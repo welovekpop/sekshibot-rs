@@ -82,7 +82,7 @@ impl SekshiBot {
         } else {
             anyhow::bail!("no jwt found")
         };
-        let api_auth = format!("JWT {}", jwt);
+        let api_auth = format!("JWT {jwt}");
 
         log::info!("loading state...");
         let now = client
@@ -186,7 +186,7 @@ impl SekshiBot {
                 match api_receiver.recv_timeout(Duration::from_millis(16)) {
                     Err(flume::RecvTimeoutError::Timeout) => continue,
                     Ok(handler::ApiMessage::SendChat(message)) => {
-                        log::info!("sending chat message: {}", message);
+                        log::info!("sending chat message: {message}");
                         let send_chat = serde_json::json!({
                             "command": "sendChat",
                             "data": message,
@@ -236,7 +236,7 @@ impl SekshiBot {
                                 break 'outer;
                             }
 
-                            api.send_message(format_args!("Could not handle message: {}", err));
+                            api.send_message(format_args!("Could not handle message: {err}"));
                         }
                     }
                 }

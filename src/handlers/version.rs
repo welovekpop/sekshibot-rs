@@ -16,7 +16,11 @@ impl Handler for Version {
         };
 
         if command.as_str() == "version" {
-            api.send_message(format_args!("Running {} v{}", env!("CARGO_PKG_NAME"), env!("CARGO_PKG_VERSION")));
+            api.send_message(format_args!(
+                "Running {} v{}",
+                env!("CARGO_PKG_NAME"),
+                env!("CARGO_PKG_VERSION")
+            ));
         }
 
         Ok(())

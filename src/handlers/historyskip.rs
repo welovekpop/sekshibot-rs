@@ -42,10 +42,10 @@ impl Handler for HistorySkip {
         let ago = Utc::now() - time;
         if ago < Duration::hours(1) {
             let human_time = HumanTime::from(ago).to_text_en(Accuracy::Rough, Tense::Past);
-            log::info!("skipping because this song was played {}", human_time);
+            log::info!("skipping because this song was played {human_time}");
 
             self.consecutive_skip_count += 1;
-            api.send_message(format!("This song was played {}.", human_time));
+            api.send_message(format!("This song was played {human_time}."));
             api.http.skip(SkipOptions {
                 reason: Some("history".to_string()),
                 user_id: message.user_id.clone(),

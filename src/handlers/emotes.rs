@@ -22,7 +22,7 @@ impl Emotes {
     }
 
     fn insert_emote(&self, db: &Connection, name: &str, url: &str) -> anyhow::Result<()> {
-        log::info!("insert {} {}", name, url);
+        log::info!("insert {name} {url}");
         db.execute("INSERT INTO emotes (name, url) VALUES (?, ?)", [name, url])?;
         Ok(())
     }
@@ -63,7 +63,7 @@ impl Emotes {
                   <th>Name</th>
                   <th>URL</th>
                 </tr></thead>
-                <tbody>{}</tbody>
+                <tbody>{trs}</tbody>
               </table>
               <script defer>
                 if (document.body.classList) onclick = function onclick (event) {{
@@ -78,15 +78,17 @@ impl Emotes {
                 }}
               </script>
             </body>
-        "#,
-            trs
+        "#
         );
 
-        let body = minify_html::minify(body.as_bytes(), &minify_html::Cfg {
-            minify_css: true,
-            minify_js: true,
-            ..Default::default()
-        });
+        let body = minify_html::minify(
+            body.as_bytes(),
+            &minify_html::Cfg {
+                minify_css: true,
+                minify_js: true,
+                ..Default::default()
+            },
+        );
 
         let html = html_index::new()
             .raw_body(std::str::from_utf8(&body)?)
@@ -127,7 +129,7 @@ impl Handler for Emotes {
                 let emote_name = &arguments[0];
                 let emote_url = &arguments[1];
                 self.insert_emote(&api.connection(), emote_name, emote_url)?;
-                api.send_message(format_args!("{} added!", emote_name));
+                api.send_message(format_args!("{emote_name} added!"));
                 Ok(())
             }
             "emotes" => {

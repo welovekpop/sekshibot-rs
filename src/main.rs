@@ -43,7 +43,7 @@ fn main() -> Result<()> {
         Ok(_) => Ok(()),
         Err(err) => {
             if err.is::<UnauthorizedError>() {
-                eprintln!("Error: {}", err);
+                eprintln!("Error: {err}");
                 quit::with_code(75);
             } else {
                 Err(err)
