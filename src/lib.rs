@@ -119,7 +119,7 @@ impl SekshiBot {
         bot.add_handler(handlers::Emotes);
         bot.add_handler(handlers::Exit);
         bot.add_handler(handlers::SkipList::new(&now));
-        bot.add_handler(handlers::HistorySkip);
+        bot.add_handler(handlers::HistorySkip::new());
         bot.add_handler(handlers::Version);
 
         Ok(bot)
