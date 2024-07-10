@@ -35,7 +35,7 @@ impl Handler for HistorySkip {
 
         let Some(recent_entry) = recent_entry else {
             self.consecutive_skip_count = 0;
-            return Ok(())
+            return Ok(());
         };
 
         let time = recent_entry.played_at;
