@@ -23,6 +23,15 @@ pub use crate::api::uwave::UnauthorizedError;
 
 type WebSocket = tungstenite::WebSocket<MaybeTlsStream<TcpStream>>;
 
+pub(crate) fn http() -> &'static Agent {
+    use std::sync::OnceLock;
+
+    static AGENT: OnceLock<Agent> = OnceLock::new();
+    AGENT.get_or_init(|| AgentBuilder::new()
+            .tls_connector(native_tls::TlsConnector::new().unwrap().into())
+            .build())
+}
+
 #[derive(Debug, Clone)]
 pub struct ConnectionOptions {
     pub api_url: String,
@@ -33,7 +42,6 @@ pub struct ConnectionOptions {
 
 pub struct SekshiBot {
     pool: r2d2::Pool<SqliteConnectionManager>,
-    client: Agent,
     socket: WebSocket,
     api_url: String,
     api_auth: String,
@@ -66,10 +74,8 @@ fn connect_ws(url: &str) -> anyhow::Result<WebSocket> {
 impl SekshiBot {
     pub fn connect(options: ConnectionOptions) -> anyhow::Result<Self> {
         let url = |endpoint: &str| format!("{}/{}", options.api_url, endpoint);
-        let client = AgentBuilder::new().build();
-
         log::info!("signing in...");
-        let login = client
+        let login = http()
             .post(&url("auth/login"))
             .send_json(serde_json::json!({
                 "email": options.email,
@@ -85,7 +91,7 @@ impl SekshiBot {
         let api_auth = format!("JWT {jwt}");
 
         log::info!("loading state...");
-        let now = client
+        let now = http()
             .get(&url("now"))
             .set("Authorization", &api_auth)
             .call()?
@@ -109,7 +115,6 @@ impl SekshiBot {
 
         let mut bot = Self {
             pool,
-            client,
             socket,
             api_url: options.api_url,
             api_auth,
@@ -139,7 +144,7 @@ impl SekshiBot {
         let pool = self.pool;
         let mut socket = self.socket;
         let mut handlers = self.handlers;
-        let http_api = HttpApi::new(self.client, self.api_url, self.api_auth);
+        let http_api = HttpApi::new(self.api_url, self.api_auth);
 
         let socket_exit_flag = Arc::clone(&exit_flag);
         let socket_thread = std::thread::spawn(move || {

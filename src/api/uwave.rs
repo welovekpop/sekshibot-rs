@@ -3,7 +3,6 @@ use serde::Deserialize;
 use serde_json::json;
 use std::fmt::{self, Debug, Formatter};
 use thiserror::Error;
-use ureq::Agent;
 
 #[derive(Debug, Error)]
 #[error("JWT missing or expired")]
@@ -100,15 +99,13 @@ pub struct HistoryEntry<TMedia> {
 
 #[derive(Clone)]
 pub struct HttpApi {
-    client: Agent,
     api_url: String,
     auth: String,
 }
 
 impl HttpApi {
-    pub fn new(client: Agent, api_url: String, auth: String) -> Self {
+    pub fn new(api_url: String, auth: String) -> Self {
         Self {
-            client,
             api_url,
             auth,
         }
@@ -119,7 +116,7 @@ impl HttpApi {
     }
 
     pub fn history(&self, opts: HistoryOptions) -> anyhow::Result<Vec<HistoryEntry<BaseMedia>>> {
-        let mut req = self.client.get(&self.url("booth/history"));
+        let mut req = crate::http().get(&self.url("booth/history"));
         if let Some(id) = opts.media {
             req = req.query("filter[media]", &id);
         }
@@ -164,8 +161,7 @@ impl HttpApi {
     }
 
     pub fn skip(&self, opts: SkipOptions) -> anyhow::Result<()> {
-        let response = self
-            .client
+        let response = crate::http()
             .post(&self.url("booth/skip"))
             .set("Authorization", &self.auth)
             .send_json(json!({
@@ -183,7 +179,6 @@ impl HttpApi {
 impl Debug for HttpApi {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         f.debug_struct("HttpApi")
-            .field("client", &())
             .field("api_url", &self.api_url)
             .field("auth", &self.auth)
             .finish()

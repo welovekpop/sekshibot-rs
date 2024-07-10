@@ -2,7 +2,6 @@ use serde::Deserialize;
 use sha1_smol::Sha1;
 use std::io::Cursor;
 use thiserror::Error;
-use ureq::AgentBuilder;
 use yolofd::FormData;
 
 #[derive(Debug, Error)]
@@ -37,9 +36,7 @@ pub fn publish(page_name: &str, content: &str) -> Result<String, PublishError> {
         base64::encode(format!("{username}:{password}"))
     );
 
-    let client = AgentBuilder::new().build();
-
-    let ListResponse { files, .. } = client
+    let ListResponse { files, .. } = crate::http()
         .get("https://neocities.org/api/list")
         .set("authorization", &authorization)
         .call()
@@ -60,7 +57,7 @@ pub fn publish(page_name: &str, content: &str) -> Result<String, PublishError> {
     form_data.append_file(page_name, "text/html", &mut content.as_bytes())?;
     let data = form_data.end()?;
 
-    let json: serde_json::Value = client
+    let json: serde_json::Value = crate::http()
         .post("https://neocities.org/api/upload")
         .set("authorization", &authorization)
         .set("content-type", &content_type)
