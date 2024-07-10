@@ -12,11 +12,10 @@ chrono-humanize = "0.2.1"
 femme = "2.1.0"
 flume = "0.11.0"
 gumdrop = "0.8.0"
-html-escape = "0.2.7"
-html-index = { version = "0.3.3", default-features = false }
+indoc = "2.0.5"
 lazy_static = "1.4.0"
 log = "0.4.8"
-minify-html = "0.10.0"
+maud = "0.26.0"
 native-tls = "0.2.10"
 nom = { version = "7.0.0", features = ["std"], default-features = false }
 quit = "2.0.0"

@@ -105,10 +105,7 @@ pub struct HttpApi {
 
 impl HttpApi {
     pub fn new(api_url: String, auth: String) -> Self {
-        Self {
-            api_url,
-            auth,
-        }
+        Self { api_url, auth }
     }
 
     fn url(&self, endpoint: &str) -> String {

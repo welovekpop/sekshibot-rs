@@ -27,9 +27,11 @@ pub(crate) fn http() -> &'static Agent {
     use std::sync::OnceLock;
 
     static AGENT: OnceLock<Agent> = OnceLock::new();
-    AGENT.get_or_init(|| AgentBuilder::new()
+    AGENT.get_or_init(|| {
+        AgentBuilder::new()
             .tls_connector(native_tls::TlsConnector::new().unwrap().into())
-            .build())
+            .build()
+    })
 }
 
 #[derive(Debug, Clone)]
