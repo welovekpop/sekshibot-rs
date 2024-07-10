@@ -1,3 +1,4 @@
+use std::process::ExitCode;
 use anyhow::{bail, Result};
 use gumdrop::{Options, ParsingStyle};
 use sekshibot::{ConnectionOptions, SekshiBot, UnauthorizedError};
@@ -14,7 +15,7 @@ pub struct Cli {
     pub help: bool,
 }
 
-fn main() -> Result<()> {
+fn main() -> Result<ExitCode> {
     femme::with_level(log::LevelFilter::Info);
     let args = Cli::parse_args_or_exit(ParsingStyle::AllOptions);
     log::info!("args: {:?}", args);
@@ -40,11 +41,11 @@ fn main() -> Result<()> {
     })();
 
     match result {
-        Ok(_) => Ok(()),
+        Ok(_) => Ok(ExitCode::SUCCESS),
         Err(err) => {
             if err.is::<UnauthorizedError>() {
                 eprintln!("Error: {err}");
-                quit::with_code(75);
+                Ok(ExitCode::from(75))
             } else {
                 Err(err)
             }
