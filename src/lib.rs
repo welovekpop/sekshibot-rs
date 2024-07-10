@@ -104,7 +104,7 @@ impl SekshiBot {
         migrations::MIGRATIONS.to_latest(&mut pool.get().unwrap())?;
 
         if let Some(token) = socket_token {
-            socket.write_message(Message::Text(token.to_string()))?;
+            socket.send(Message::Text(token.to_string()))?;
         }
 
         let mut bot = Self {
@@ -146,7 +146,7 @@ impl SekshiBot {
             while !socket_exit_flag.load(Ordering::Relaxed) {
                 // Process all queued messages.
                 loop {
-                    let message = socket.read_message();
+                    let message = socket.read();
                     let message = match message {
                         Ok(Message::Text(message)) => {
                             if message == "-" {
@@ -191,12 +191,12 @@ impl SekshiBot {
                             "command": "sendChat",
                             "data": message,
                         });
-                        socket.write_message(Message::Text(send_chat.to_string()))?;
+                        socket.send(Message::Text(send_chat.to_string()))?;
                     }
                     Ok(handler::ApiMessage::Exit) | Err(_) => {
                         log::info!("logging out");
                         let logout = serde_json::json!({ "command": "logout" });
-                        socket.write_message(Message::Text(logout.to_string()))?;
+                        socket.send(Message::Text(logout.to_string()))?;
                         socket.close(None)?;
                         break;
                     }
