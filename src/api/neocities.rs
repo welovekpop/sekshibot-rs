@@ -1,3 +1,4 @@
+use base64::prelude::*;
 use serde::Deserialize;
 use sha1_smol::Sha1;
 use std::io::Cursor;
@@ -33,7 +34,7 @@ pub fn publish(page_name: &str, content: &str) -> Result<String, PublishError> {
     let password = std::env::var("NEOCITIES_PASSWORD").map_err(|_| PublishError::MissingAuth)?;
     let authorization = format!(
         "Basic {}",
-        base64::encode(format!("{username}:{password}"))
+        BASE64_STANDARD.encode(format!("{username}:{password}"))
     );
 
     let ListResponse { files, .. } = crate::http()
