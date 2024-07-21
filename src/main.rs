@@ -5,7 +5,7 @@ use metrics_process::Collector;
 use sekshibot::{ConnectionOptions, SekshiBot, UnauthorizedError};
 use std::{process::ExitCode, time::Duration};
 
-///
+/// The chat moderation-and-more bot for the WLK community.
 #[derive(Debug, Clone, Options)]
 pub struct Cli {
     /// HTTP API endpoint of the üWave server to connect to.
@@ -15,21 +15,11 @@ pub struct Cli {
     #[options(required)]
     pub socket_url: String,
     pub help: bool,
+    pub metrics: Option<String>,
 }
 
-fn main() -> Result<ExitCode> {
-    femme::with_level(log::LevelFilter::Info);
-    let args = Cli::parse_args_or_exit(ParsingStyle::AllOptions);
-    log::info!("args: {:?}", args);
-
-    let email = match std::env::var("SEKSHIBOT_EMAIL") {
-        Ok(email) => email,
-        _ => bail!("missing SEKSHIBOT_EMAIL env var"),
-    };
-    let password = match std::env::var("SEKSHIBOT_PASSWORD") {
-        Ok(password) => password,
-        _ => bail!("missing SEKSHIBOT_PASSWORD env var"),
-    };
+fn setup_metrics(endpoint: &str) -> anyhow::Result<flume::Sender<()>> {
+    let (tx, rx) = flume::bounded::<()>(1);
 
     let process_metrics = Collector::default();
     process_metrics.describe();
@@ -38,7 +28,8 @@ fn main() -> Result<ExitCode> {
         .install_recorder()
         .expect("failed to install recorder");
 
-    let (tx, rx) = flume::bounded::<()>(1);
+    let server = tiny_http::Server::http(endpoint).unwrap();
+
     let collect_exit = rx.clone();
     let _collect_handle = std::thread::Builder::new()
         .name("prometheus collector".into())
@@ -52,8 +43,8 @@ fn main() -> Result<ExitCode> {
             }
         })
         .unwrap();
+
     let server_exit = rx.clone();
-    let server = tiny_http::Server::http("0.0.0.0:3003").unwrap();
     let _server_handle = std::thread::Builder::new()
         .name("prometheus exporter".into())
         .spawn(move || {
@@ -79,6 +70,26 @@ fn main() -> Result<ExitCode> {
             anyhow::Ok(())
         })
         .unwrap();
+
+    Ok(tx)
+}
+
+fn main() -> Result<ExitCode> {
+    femme::with_level(log::LevelFilter::Info);
+    let args = Cli::parse_args_or_exit(ParsingStyle::AllOptions);
+    log::info!("args: {:?}", args);
+
+    let email = match std::env::var("SEKSHIBOT_EMAIL") {
+        Ok(email) => email,
+        _ => bail!("missing SEKSHIBOT_EMAIL env var"),
+    };
+    let password = match std::env::var("SEKSHIBOT_PASSWORD") {
+        Ok(password) => password,
+        _ => bail!("missing SEKSHIBOT_PASSWORD env var"),
+    };
+
+    let metrics_endpoint = args.metrics.as_deref().unwrap_or("0.0.0.0:3003");
+    let tx = setup_metrics(&metrics_endpoint)?;
 
     let result = (|| {
         let bot = SekshiBot::connect(ConnectionOptions {
