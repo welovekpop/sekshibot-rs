@@ -1,7 +1,9 @@
-use std::process::ExitCode;
 use anyhow::{bail, Result};
 use gumdrop::{Options, ParsingStyle};
+use metrics_exporter_prometheus::PrometheusBuilder;
+use metrics_process::Collector;
 use sekshibot::{ConnectionOptions, SekshiBot, UnauthorizedError};
+use std::{process::ExitCode, time::Duration};
 
 ///
 #[derive(Debug, Clone, Options)]
@@ -29,6 +31,55 @@ fn main() -> Result<ExitCode> {
         _ => bail!("missing SEKSHIBOT_PASSWORD env var"),
     };
 
+    let process_metrics = Collector::default();
+    process_metrics.describe();
+
+    let prom_handle = PrometheusBuilder::new()
+        .install_recorder()
+        .expect("failed to install recorder");
+
+    let (tx, rx) = flume::bounded::<()>(1);
+    let collect_exit = rx.clone();
+    let _collect_handle = std::thread::Builder::new()
+        .name("prometheus collector".into())
+        .spawn(move || loop {
+            match collect_exit.recv_timeout(Duration::from_secs(3)) {
+                Ok(_) => break,
+                Err(flume::RecvTimeoutError::Disconnected) => break,
+                Err(_) => {
+                    process_metrics.collect();
+                }
+            }
+        })
+        .unwrap();
+    let server_exit = rx.clone();
+    let server = tiny_http::Server::http("0.0.0.0:3003").unwrap();
+    let _server_handle = std::thread::Builder::new()
+        .name("prometheus exporter".into())
+        .spawn(move || {
+            loop {
+                match server_exit.recv_timeout(Duration::from_millis(50)) {
+                    Ok(_) => break,
+                    Err(flume::RecvTimeoutError::Disconnected) => break,
+                    Err(_) => {}
+                }
+                if let Some(request) = server.recv_timeout(Duration::from_millis(50))? {
+                    if request.url() == "/metrics" || request.url().starts_with("/metrics?") {
+                        let response = tiny_http::Response::from_string(prom_handle.render())
+                            .with_header(
+                                tiny_http::Header::from_bytes(b"content-type", b"text/plain")
+                                    .unwrap(),
+                            );
+                        request.respond(response)?;
+                    } else {
+                        request.respond(tiny_http::Response::empty(tiny_http::StatusCode(404)))?;
+                    }
+                }
+            }
+            anyhow::Ok(())
+        })
+        .unwrap();
+
     let result = (|| {
         let bot = SekshiBot::connect(ConnectionOptions {
             api_url: args.api_url,
@@ -39,6 +90,9 @@ fn main() -> Result<ExitCode> {
 
         bot.run()
     })();
+
+    let _ = tx.send(());
+    drop(tx);
 
     match result {
         Ok(_) => Ok(ExitCode::SUCCESS),

@@ -149,108 +149,114 @@ impl SekshiBot {
         let http_api = HttpApi::new(self.api_url, self.api_auth);
 
         let socket_exit_flag = Arc::clone(&exit_flag);
-        let socket_thread = std::thread::spawn(move || {
-            while !socket_exit_flag.load(Ordering::Relaxed) {
-                // Process all queued messages.
-                loop {
-                    let message = socket.read();
-                    let message = match message {
-                        Ok(Message::Text(message)) => {
-                            if message == "-" {
-                                continue;
+        let socket_thread = std::thread::Builder::new()
+            .name("websocket".into())
+            .spawn(move || {
+                while !socket_exit_flag.load(Ordering::Relaxed) {
+                    // Process all queued messages.
+                    loop {
+                        let message = socket.read();
+                        let message = match message {
+                            Ok(Message::Text(message)) => {
+                                if message == "-" {
+                                    continue;
+                                }
+                                Some(message)
                             }
-                            Some(message)
+                            Ok(Message::Close(_)) => {
+                                log::info!("connection ended");
+                                break;
+                            }
+                            Ok(_) => None,
+                            Err(tungstenite::Error::Io(io_err))
+                                if io_err.kind() == std::io::ErrorKind::WouldBlock =>
+                            {
+                                break
+                            }
+                            Err(tungstenite::Error::ConnectionClosed) => {
+                                log::info!("connection closed");
+                                socket_exit_flag.store(true, Ordering::Relaxed);
+                                return Ok(());
+                            }
+                            Err(err) => {
+                                todo!("handle error {:?}", err)
+                            }
+                        };
+
+                        if let Some(message) = message {
+                            let message: handler::Message = serde_json::from_str(&message).unwrap();
+
+                            if let Some(message_type) = message.into_message_type() {
+                                let _ = received_message_sender.send(message_type);
+                            }
                         }
-                        Ok(Message::Close(_)) => {
-                            log::info!("connection ended");
+                    }
+
+                    match api_receiver.recv_timeout(Duration::from_millis(16)) {
+                        Err(flume::RecvTimeoutError::Timeout) => continue,
+                        Ok(handler::ApiMessage::SendChat(message)) => {
+                            log::info!("sending chat message: {message}");
+                            let send_chat = serde_json::json!({
+                                "command": "sendChat",
+                                "data": message,
+                            });
+                            socket.send(Message::Text(send_chat.to_string()))?;
+                        }
+                        Ok(handler::ApiMessage::Exit) | Err(_) => {
+                            log::info!("logging out");
+                            let logout = serde_json::json!({ "command": "logout" });
+                            socket.send(Message::Text(logout.to_string()))?;
+                            socket.close(None)?;
                             break;
                         }
-                        Ok(_) => None,
-                        Err(tungstenite::Error::Io(io_err))
-                            if io_err.kind() == std::io::ErrorKind::WouldBlock =>
-                        {
-                            break
-                        }
-                        Err(tungstenite::Error::ConnectionClosed) => {
-                            log::info!("connection closed");
-                            socket_exit_flag.store(true, Ordering::Relaxed);
-                            return Ok(());
-                        }
-                        Err(err) => {
-                            todo!("handle error {:?}", err)
-                        }
-                    };
-
-                    if let Some(message) = message {
-                        let message: handler::Message = serde_json::from_str(&message).unwrap();
-
-                        if let Some(message_type) = message.into_message_type() {
-                            let _ = received_message_sender.send(message_type);
-                        }
                     }
                 }
 
-                match api_receiver.recv_timeout(Duration::from_millis(16)) {
-                    Err(flume::RecvTimeoutError::Timeout) => continue,
-                    Ok(handler::ApiMessage::SendChat(message)) => {
-                        log::info!("sending chat message: {message}");
-                        let send_chat = serde_json::json!({
-                            "command": "sendChat",
-                            "data": message,
-                        });
-                        socket.send(Message::Text(send_chat.to_string()))?;
-                    }
-                    Ok(handler::ApiMessage::Exit) | Err(_) => {
-                        log::info!("logging out");
-                        let logout = serde_json::json!({ "command": "logout" });
-                        socket.send(Message::Text(logout.to_string()))?;
-                        socket.close(None)?;
-                        break;
-                    }
-                }
-            }
-
-            anyhow::Result::<()>::Ok(())
-        });
+                anyhow::Result::<()>::Ok(())
+            })
+            .unwrap();
 
         let (handler_end_sender, end_receiver) = flume::bounded(1);
         let handler_exit_flag = Arc::clone(&exit_flag);
-        let handler_thread = std::thread::spawn(move || {
-            let mut retval = Ok(());
+        let handler_thread = std::thread::Builder::new()
+            .name("message handler".into())
+            .spawn(move || {
+                let mut retval = Ok(());
 
-            'outer: while !handler_exit_flag.load(Ordering::Relaxed) {
-                let message =
-                    match received_message_receiver.recv_timeout(Duration::from_millis(16)) {
-                        Ok(message) => message,
-                        Err(flume::RecvTimeoutError::Timeout) => continue,
-                        Err(err) => {
-                            log::warn!("handler exiting because: {:?}", err);
-                            break;
-                        }
-                    };
-
-                // TODO spawn these onto a threadpool
-                log::info!("handling message {:?}", message);
-                let api = handler::Api::new(api_sender.clone(), pool.clone(), http_api.clone());
-                for handler in handlers.iter_mut() {
-                    match handler.handle(api.clone(), &message) {
-                        Ok(..) => (),
-                        Err(err) => {
-                            // Exit if we are no longer authenticated so the bot can be restarted
-                            if err.is::<UnauthorizedError>() {
-                                api.exit();
-                                retval = Err(err);
-                                break 'outer;
+                'outer: while !handler_exit_flag.load(Ordering::Relaxed) {
+                    let message =
+                        match received_message_receiver.recv_timeout(Duration::from_millis(16)) {
+                            Ok(message) => message,
+                            Err(flume::RecvTimeoutError::Timeout) => continue,
+                            Err(err) => {
+                                log::warn!("handler exiting because: {:?}", err);
+                                break;
                             }
+                        };
 
-                            api.send_message(format_args!("Could not handle message: {err}"));
+                    // TODO spawn these onto a threadpool
+                    log::info!("handling message {:?}", message);
+                    let api = handler::Api::new(api_sender.clone(), pool.clone(), http_api.clone());
+                    for handler in handlers.iter_mut() {
+                        match handler.handle(api.clone(), &message) {
+                            Ok(..) => (),
+                            Err(err) => {
+                                // Exit if we are no longer authenticated so the bot can be restarted
+                                if err.is::<UnauthorizedError>() {
+                                    api.exit();
+                                    retval = Err(err);
+                                    break 'outer;
+                                }
+
+                                api.send_message(format_args!("Could not handle message: {err}"));
+                            }
                         }
                     }
                 }
-            }
 
-            handler_end_sender.send(retval).unwrap();
-        });
+                handler_end_sender.send(retval).unwrap();
+            })
+            .unwrap();
 
         let result = flume::Selector::new()
             .recv(&end_receiver, |err| err)
