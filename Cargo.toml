@@ -10,12 +10,15 @@ base64 = "0.22.0"
 chrono = { version = "0.4.13", features = ["serde"] }
 chrono-humanize = "0.2.1"
 femme = "2.1.0"
-flume = "0.11.0"
+flume = { version = "0.11.0", default-features = false, features = ["select", "eventual-fairness"] }
 gumdrop = "0.8.0"
 indoc = "2.0.5"
 lazy_static = "1.4.0"
 log = "0.4.8"
 maud = "0.26.0"
+metrics = "0.23.0"
+metrics-exporter-prometheus = { version = "0.15.3", default-features = false }
+metrics-process = "2.1.0"
 native-tls = "0.2.10"
 nom = { version = "7.0.0", features = ["std"], default-features = false }
 r2d2 = "0.8.9"
@@ -28,6 +31,7 @@ sha1_smol = "1.0.0"
 shorten-url = "1.0.0"
 signal-hook = "0.3.13"
 thiserror = "1.0.20"
+tiny_http = "0.12.0"
 tungstenite = { version = "0.23.0", features = ["native-tls", "url"] }
 ureq = { version = "2.4.0", default-features = false, features = ["native-tls", "gzip", "json"] }
 url = "2.2.2"
