@@ -19,7 +19,7 @@ maud = "0.26.0"
 metrics = "0.23.0"
 metrics-exporter-prometheus = { version = "0.15.3", default-features = false }
 metrics-process = "2.1.0"
-native-tls = "0.2.10"
+native-tls = { version = "0.2.10", features = ["vendored"] }
 nom = { version = "7.0.0", features = ["std"], default-features = false }
 r2d2 = "0.8.9"
 r2d2_sqlite = "0.24.0"
