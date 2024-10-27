@@ -89,7 +89,7 @@ fn main() -> Result<ExitCode> {
     };
 
     let metrics_endpoint = args.metrics.as_deref().unwrap_or("0.0.0.0:3003");
-    let tx = setup_metrics(&metrics_endpoint)?;
+    let tx = setup_metrics(metrics_endpoint)?;
 
     let result = (|| {
         let bot = SekshiBot::connect(ConnectionOptions {

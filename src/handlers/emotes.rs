@@ -1,6 +1,5 @@
 use crate::api::neocities;
 use crate::handler::{Api, ChatCommand, Handler, MessageType};
-use crate::SekshiBot;
 use indoc::indoc;
 use rusqlite::{Connection, OptionalExtension as _};
 use shorten_url::shorten;
@@ -8,10 +7,6 @@ use shorten_url::shorten;
 #[derive(Debug)]
 pub struct Emotes;
 impl Emotes {
-    pub fn new(_bot: &mut SekshiBot) -> anyhow::Result<Self> {
-        Ok(Self)
-    }
-
     fn get_emote(&self, db: &Connection, name: &str) -> anyhow::Result<Option<String>> {
         let url = db
             .query_row("SELECT url FROM emotes WHERE name = ?", [name], |row| {
