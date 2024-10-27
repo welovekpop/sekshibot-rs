@@ -16,9 +16,9 @@ indoc = "2.0.5"
 lazy_static = "1.4.0"
 log = "0.4.8"
 maud = "0.26.0"
-metrics = "0.23.0"
-metrics-exporter-prometheus = { version = "0.15.3", default-features = false }
-metrics-process = "2.1.0"
+metrics = "0.24.0"
+metrics-exporter-prometheus = { version = "0.16.0", default-features = false }
+metrics-process = "2.3.0"
 native-tls = "0.2.10"
 nom = { version = "7.0.0", features = ["std"], default-features = false }
 r2d2 = "0.8.9"
