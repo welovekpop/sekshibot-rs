@@ -9,6 +9,13 @@ use thiserror::Error;
 pub struct UnauthorizedError;
 
 #[derive(Debug, Clone, Deserialize)]
+pub struct User {
+    #[serde(rename = "_id")]
+    pub id: String,
+    pub username: String,
+}
+
+#[derive(Debug, Clone, Deserialize)]
 pub struct BaseMedia {
     #[serde(rename = "_id")]
     pub id: String,
@@ -170,6 +177,19 @@ impl HttpApi {
         let _: serde_json::Value = response.into_json()?;
 
         Ok(())
+    }
+
+    pub fn check_auth(&self) -> anyhow::Result<User> {
+        let response = crate::http()
+            .post(&self.url("auth"))
+            .set("Authorization", &self.auth)
+            .call()?;
+
+        type AuthResponseShape = ResponseData<Option<User>, (), ()>;
+        let response: AuthResponseShape = response.into_json()?;
+
+        let user = response.data.ok_or(UnauthorizedError)?;
+        Ok(user)
     }
 }
 

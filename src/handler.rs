@@ -98,6 +98,7 @@ pub enum MessageType {
     Advance(Box<AdvanceMessage>),
     ChatMessage(ChatMessage),
     WaitlistUpdate { user_ids: Vec<String> },
+    Heartbeat,
 }
 
 #[derive(Debug, Clone, Deserialize)]

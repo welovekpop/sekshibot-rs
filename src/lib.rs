@@ -123,11 +123,13 @@ impl SekshiBot {
             handlers: vec![],
         };
 
-        bot.add_handler(handlers::Emotes);
+        bot.add_handler(handlers::Heartbeat);
+        bot.add_handler(handlers::Version);
         bot.add_handler(handlers::Exit);
+
+        bot.add_handler(handlers::Emotes);
         bot.add_handler(handlers::SkipList::new(&now));
         bot.add_handler(handlers::HistorySkip::new());
-        bot.add_handler(handlers::Version);
 
         Ok(bot)
     }
@@ -159,6 +161,8 @@ impl SekshiBot {
                         let message = match message {
                             Ok(Message::Text(message)) => {
                                 if message == "-" {
+                                    _ = received_message_sender
+                                        .try_send(handler::MessageType::Heartbeat);
                                     continue;
                                 }
                                 Some(message)
