@@ -16,7 +16,14 @@ impl Handler for Exit {
         };
 
         if command.as_str() == "exit" {
-            api.exit();
+            let is_admin = api
+                .http
+                .user(&message.user_id)?
+                .is_some_and(|user| user.roles.iter().any(|role| role == "admin"));
+
+            if is_admin {
+                api.exit();
+            }
         }
 
         Ok(())

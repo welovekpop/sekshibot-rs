@@ -13,6 +13,7 @@ pub struct User {
     #[serde(rename = "_id")]
     pub id: String,
     pub username: String,
+    pub roles: Vec<String>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -177,6 +178,20 @@ impl HttpApi {
         let _: serde_json::Value = response.into_json()?;
 
         Ok(())
+    }
+
+    pub fn user(&self, id: &str) -> anyhow::Result<Option<User>> {
+        let response = crate::http()
+            .post(&self.url(&format!("users/{id}")))
+            .set("Authorization", &self.auth)
+            .call()?;
+
+        // TODO: check HTTP status
+
+        type UserResponseShape = ResponseData<Option<User>, (), ()>;
+        let response: UserResponseShape = response.into_json()?;
+
+        Ok(response.data)
     }
 
     pub fn check_auth(&self) -> anyhow::Result<User> {
